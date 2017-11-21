@@ -1,10 +1,10 @@
 package gserver
 
 import (
-	"gserver/files"
 	"log"
 
 	"github.com/icza/session"
+	"github.com/rveen/gserver/files"
 	"github.com/rveen/ogdl"
 	rpc "github.com/rveen/ogdl/ogdlrf"
 )
