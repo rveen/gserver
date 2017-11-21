@@ -1,0 +1,32 @@
+$T(_this,header)
+$T(_this,navbar)
+
+$if(u.x0!=R.u)
+$(u=store.search('y=h id1=1 x0='+R.u))
+$(u=u.result.item)
+$end
+
+<div class="container">
+<div class="row">
+<div class="col-md-12">
+
+<h1>$\R</h1>
+<pre>
+$R
+</pre>
+
+<h1>$\u</h1>
+<pre>
+$u
+</pre>
+
+<h1>$\a</h1>
+<pre>
+$a
+</pre>
+
+</div>
+</div>
+</div>
+
+$footer

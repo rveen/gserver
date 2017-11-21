@@ -1,0 +1,40 @@
+$T(_this,header)
+$T(_this,navbar)
+
+$if(R.user!=user)
+<script>location.href="/login"</script>
+$else
+
+$(u=store.Search('y=h id1=1 x0='+R.u))
+$(u=u.result.item)
+
+<div class="breadcrumb">
+<div class="container">
+<a href="/$u.x0">$u.x1</a> <i style="color: #aaa" class="fa fa-angle-double-right"></i> <a href="/$u.x0/files">files</a>
+</div>
+</div>
+
+$(fs=files.List("files/"+R.user+"/"+R.path))
+
+<br><br>
+<div class="container">
+<table class="table">
+$for(f,fs)
+$if(f[0]._this == 'd')
+
+$if(strings.HasSuffix(f[0].n,".git"))
+<tr><td><a style="color: #4183c4" href="?path=$R.path/$f[0].n"><i class="fa fa-git"></i> &nbsp; $strings.Substring(f[0].n,0,-4)/</a></td><td></td><td>$f[0].t</td></tr>
+$else
+<tr><td><a style="color: #4183c4" href="?path=$R.path/$f[0].n"><i class="fa fa-folder-o"></i> &nbsp; $f[0].n/</a></td><td></td><td>$f[0].t</td></tr>
+$end
+
+$else
+<tr><td><a style="color: #4183c4" href="/$R.user/file/$R.path/$f[0].n"><i class="fa fa-file-o"></i> &nbsp; $f[0].n</a></td><td>$f[0].b</td><td>$f[0].t</td></tr>
+$end
+$end
+</table>
+</div>
+
+$end
+
+$footer

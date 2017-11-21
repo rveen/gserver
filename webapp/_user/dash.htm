@@ -1,0 +1,23 @@
+$T(header)
+$T(navbar)
+$(a=u)
+<style>.active-i { font-weight: bold !important; }</style>
+$(u=store.Search('y=h id1=1 x0='+R.u))
+$(u=u.result.item)
+$T(navbar_user)
+
+<div class="container">
+<div class="title">Dashboard</div>
+<div class="row">
+<div class="col-md-6">
+<button class="btn btn-primary">Abierto</button>
+<button class="btn btn-primary disabled">Cerrado</button>
+</div>
+<div class="col-md-6">
+<button class="btn btn-primary"><i class="fa fa-map-marker"> </i> &nbsp; Estoy aquí </button>
+</div>
+</div>
+
+</div>
+
+$footer

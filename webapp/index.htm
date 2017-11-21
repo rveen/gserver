@@ -1,0 +1,37 @@
+$T(_this,header)
+$T(_this,navbar)
+
+<div class="container">
+<h1>Chapter 1</h1>
+<p>
+Curabitur tempor, turpis at gravida consectetur, elit ex rutrum ex, at facilisis arcu turpis at metus. Praesent rutrum vehicula laoreet. Duis vitae rhoncus justo. Integer rhoncus ante eget ipsum dictum sodales. Interdum et malesuada fames ac ante ipsum primis in faucibus. Duis ornare eleifend commodo. Aliquam maximus sit amet lorem vitae mollis. Vestibulum ut eros et nunc fermentum auctor. Etiam sed lobortis ipsum. Vestibulum eu dapibus tortor, molestie suscipit arcu. Cras nec turpis id neque sodales posuere aliquet ac risus. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia Curae;
+</p><p>
+Pellentesque commodo eros et urna tincidunt blandit. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Pellentesque ultricies pretium fringilla. In varius ultrices dolor, vel auctor turpis commodo quis. Nulla leo lorem, suscipit quis eros nec, interdum mollis nibh. Sed luctus tincidunt lorem ac vestibulum. Fusce imperdiet id est a varius. Maecenas hendrerit sodales lectus vel convallis. Pellentesque odio risus, vehicula eget orci et, ultricies elementum ligula. Nam venenatis tellus a egestas egestas. Fusce hendrerit posuere ipsum, ac consequat est. Vestibulum turpis nisi, volutpat accumsan convallis ac, iaculis id diam. Aenean sed porttitor lorem. Aliquam sed ultrices nulla. Proin facilisis orci id iaculis elementum. In malesuada egestas tellus, eu porttitor enim fermentum eu.
+</p>
+
+<pre>
+$R
+</pre>
+<br><br>
+<form action=".">
+<label>Search</label>
+<input class="form-control" name="q" value="$R.q">
+</form>
+<br><br>
+<table class="table">
+$for(r,zoekt.search(R.q))
+<tr><td><a href="">$r[0].repo / $r[0].file</a><br>$r[0].lines</td></tr>
+$end
+</table>
+
+$(prjs=store.search("sid:104"))
+
+<table class="table">
+$for(prj,prjs)
+<tr><td>$prj[0].x0</td><td>$prj[0].x1</td></tr>
+$end
+</table>
+
+</div>
+
+$footer

@@ -1,0 +1,57 @@
+$T(_this,header)
+
+$(a=u)
+<style>.active-i { font-weight: bold !important; }</style>
+$(u=store.Search('y=h id1=1 x0='+R.u))
+$(u=u.result.item)
+$T(_this,navbar_user)
+
+<br>
+
+<div class="container">
+<h1>Localización</h1>
+
+<div id="map-canvas" style="height: 300px; width: 100%; border: 1px solid #ddd"> </div>
+
+<br><br>
+<h1>Dirección</h1>
+<pre>
+$a.addr
+</pre>
+<br>
+<h1>Redes sociales</h1>
+<br>
+$(fb=wiki.Social(a.social,"facebook"))
+$if(fb!='')
+<a href="$fb"><i class="fa fa-facebook-square"> $fb</i><br>
+$end
+$(fb=wiki.Social(a.social,"twitter"))
+$if(fb!='')
+<a href="$fb"><i class="fa fa-twitter-square"> $fb</i><br>
+$end
+
+</div><!-- container -->
+
+<script src="https://maps.googleapis.com/maps/api/js?v=3.exp"></script>
+
+<script>
+var map;
+function initialize() {
+  var mapOptions = {
+    zoom: 12,
+    center: new google.maps.LatLng($u.loc)
+  };
+  map = new google.maps.Map(document.getElementById('map-canvas'),
+      mapOptions);
+  
+  var marker = new google.maps.Marker({
+      position: new google.maps.LatLng($u.loc),
+      map: map,
+      title: '$u.x1'
+  });
+}
+
+google.maps.event.addDomListener(window, 'load', initialize);           
+</script>
+
+$footer

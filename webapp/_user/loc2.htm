@@ -1,0 +1,87 @@
+$T(_this,header)
+$T(_this,navbar)
+
+<div class="container">
+
+<!-- USER LOGO AND SEARCH -->
+
+<br>
+<div class="logo"></div>
+<div class="title"><a href="/$url0">$u.x1</a></div>
+
+<!-- USER MENU -->
+<div class="navbar" style="border-bottom: 1px solid #ddd; border-top: 1px solid #ddd; padding:0; background: #f8f8f8; margin-bottom:1px">    
+      <ul class="nav navbar-nav" style="padding:0; margin: 0">
+      <li ><a style="padding-left:0px" href="/$u.x0/expo">Expo</a></li>
+      <li><a href="/$u.x0/bio">Bio</a></li>
+      <li><a href="/$u.x0/blog">Blog</a></li>
+      <li><a href="/$u.x0/loc">Localización</a></li>
+      
+      <!-- Only enable editing in own space -->
+      $if(user==u.x0)
+      <li class="dropdown">
+           <a href="#" class="dropdown-toggle" data-toggle="dropdown">Admin <i class="fa fa-caret-down"></i></a>
+           <ul class="dropdown-menu">
+           <li><a href="/$url/edit">Editar esto</a></li>          
+           <li><a href="/$url/add?y=i">Añadir pagina</a></li>
+           <li><a href="/$url/add?y=e">Añadir evento</a></li>
+           <li><a href="/$user/upload">Añadir fichero</a></li>
+           $if(user=="rolf")<li><a href="/admin/add?y=h">Añadir usuario</a></li>$end
+           </ul>
+      </li>
+      $end
+      </ul>
+      <form class="navbar-form navbar-right form1" style="margin-left: 10px; padding-right: 20px"
+					role="search">
+					<div class="form-group" style="border-left: 1px solid #ddd">
+					    
+						<input type="text" class="form-control" style="border:0"
+							placeholder="Busca en The User"><i class="fa fa-search"></i>
+					</div>
+	  </form>
+</div>
+
+<!-- /USER MENU -->
+
+
+<br>
+
+<div id="map" class="map" style="height: 300px !important; width: 100%; border: 1px solid #ccc;"></div>
+
+<h2>Contacto</h2>
+
+<p>
+Rolf Veen<br>
+c/Carreter, 25<br>
+45678 VALENCIA<br>
+<br>
+<i style="font-size: 1.2em" class="fa fa-phone"></I> 2345895423<br>
+<i style="font-size: 1.2em" class="fa fa-envelope"></I> info@info.info<br>
+
+<br>
+<hr>
+<i style="color: #3b5998; font-size: 1.5em" class="fa fa-facebook-square"></I>
+<i style="color: #55acee; font-size: 1.5em" class="fa fa-twitter-square"></I>
+<i style="color: #800; font-size: 1.5em" class="fa fa-google-plus-square"></i>
+</p>
+
+</div><!-- container -->
+
+<script src="/js/jquery.min.js"></script>
+<script src="/js/bootstrap.min.js"></script>
+<script src="/js/gfunctions.js"></script>
+<script src="/js/leaflet.js"></script>
+
+<script>
+var map = L.map('map').setView([$u.loc], 12);
+
+L.tileLayer('http://b.tile.cloudmade.com/7e5efda27cc94d5ba843a5a41e06e768/997/256/{z}/{x}/{y}.png', {
+    attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, <a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery © <a href="http://cloudmade.com">CloudMade</a>',
+    maxZoom: 18
+}).addTo(map);
+
+var marker = L.marker([$u.loc]).addTo(map);
+
+</script>
+
+</body></html>

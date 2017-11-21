@@ -1,0 +1,198 @@
+$T(_this,header)
+$T(_this,navbar_i)
+
+<!--
+https://developer.mozilla.org/en-US/docs/Using_files_from_web_applications
+http://farhadi.ir/projects/html5sortable/
+http://ajaxload.info/
+ -->
+
+<style>
+#preview img {
+	height: 100px;
+	width: auto;
+	border: 1px solid #ccc;
+	margin: 10px;
+}
+
+li img {
+	height: 100px;
+	width: auto;
+	border: 1px solid #ccc;
+}
+
+li {
+	margin: 4px 8px 4px 0;
+}
+
+ul {
+	margin: 0px;
+	padding: 0px;
+	list-style-type: none;
+}
+
+.sortable.grid {
+	overflow: hidden;
+}
+
+.sortable.grid li {
+	line-height: 100px;
+	float: left;
+	width: auto;
+	min-width: 50px;
+	height: 100px;
+	text-align: center;
+}
+
+li.sortable-placeholder {
+	border: 1px dashed #CCC;
+	background: none;
+}
+</style>
+
+<br>
+<div class="container">
+
+	<form id="theform" action="/$user" method="post" enctype="multipart/form-data">
+
+	<div class="form-group">
+		<input class="form-control" name="fi" type="file" id="fileElem" multiple accept="image/*"
+			style="display: none" onchange="handleFiles(this.files)"> <a
+			class="btn btn-default" href="#" id="fileSelect">Select some
+			files</a><br>
+			<br>
+		<label>Folder (below $user)</label> <input class="form-control" id="folder" name="_folder" type="text">
+		<div id="preview"></div>
+		<br>
+		<button type="submit" class="btn btn-info">Submit</button>
+		<a href="/$user"><div class="btn btn-warning">Cancel</div></a>
+		<!--  <progress id="progressBar" value="0" max="100" style="width: 100px;"></progress> -->
+
+	</div>
+	</form>
+
+	<ul class="sortable grid" id="thelist">
+	</ul>
+
+
+</div>
+
+<script src="/js/jquery.min.js"></script>
+<script src="/js/jquery.sortable.min.js"></script>
+<script src="/js/bootstrap.min.js"></script>
+<script src="/js/gfunctions.js"></script>
+
+<script>
+	var _ = jQuery.noConflict();
+	_('.sortable').sortable();
+</script>
+
+<script>
+	_("#theform").submit(function(event) {
+
+		var list = document.getElementById('thelist');
+		var imgs = list.getElementsByTagName('img')
+
+		for (var i = 0; i < imgs.length; i++) {
+
+			img = imgs[i];
+
+			var inn = document.createElement("input");
+			inn.setAttribute("type", "checkbox");
+			inn.setAttribute("name", "file_" + i);
+			inn.setAttribute("checked", "true");
+			inn.value = img.name;
+			this.appendChild(inn);
+		}
+
+		sendFiles();
+
+		document.getElementById("fileElem").value = "";
+		//event.preventDefault();
+	});
+
+	function sendFiles() {
+		var imgs = document.querySelectorAll(".obj");
+
+		var folder = $\('#folder').value
+
+		for (var i = 0; i < imgs.length; i++) {
+			/*new*/FileUpload(imgs[i].file, folder);
+		}
+	}
+
+	function FileUpload(file, folder) {
+
+		var formdata = new FormData();
+		formdata.append("file1", file);
+		formdata.append("_folder", folder);
+		var ajax = new XMLHttpRequest();
+		ajax.upload.addEventListener("progress", progressHandler, false);
+		ajax.addEventListener("load", completeHandler, false);
+		// ajax.addEventListener("error", errorHandler, false);
+		// ajax.addEventListener("abort", abortHandler, false);
+		ajax.open("POST", "data.htm");
+		ajax.send(formdata);
+	}
+
+	function progressHandler(event) {
+		var percent = (event.loaded / event.total) * 100;
+		_("progressBar").value = Math.round(percent);
+	}
+	function completeHandler(event) {
+		_("progressBar").value = 0;
+	}
+	function errorHandler(event) {
+		_("status").innerHTML = "Upload Failed";
+	}
+	function abortHandler(event) {
+		_("status").innerHTML = "Upload Aborted";
+	}
+
+	function handleFiles(files) {
+		for (var i = 0; i < files.length; i++) {
+
+			var file = files[i];
+			var imageType = /image.*/;
+
+			if (!file.type.match(imageType)) {
+				continue;
+			}
+
+			var img = document.createElement("img");
+			img.classList.add("obj");
+			img.file = file;
+			img.name = file.name;
+			preview.appendChild(img);
+
+			var li = document.createElement('li');
+			li.setAttribute("draggable", "true");
+			li.appendChild(img);
+			thelist.appendChild(li);
+			_('.sortable').sortable();
+
+			var reader = new FileReader();
+			reader.onload = (function(aImg) {
+				return function(e) {
+					aImg.src = e.target.result;
+				};
+			})(img);
+			reader.readAsDataURL(file);
+		}
+	}
+
+	var fileSelect = document.getElementById("fileSelect"), fileElem = document
+			.getElementById("fileElem");
+	var preview = document.getElementById("preview");
+	var thelist = document.getElementById("thelist");
+
+	fileSelect.addEventListener("click", function(e) {
+		if (fileElem) {
+			fileElem.click();
+		}
+		e.preventDefault(); // prevent navigation to "#"
+	}, false);
+</script>
+
+</body>
+</html>

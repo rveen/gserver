@@ -1,0 +1,25 @@
+$T(_this,header)
+$T(_this,navbar)
+
+<div class="container">
+<div class="row">
+<div class="col-md-12">
+
+$(a=store.get(R.id))
+
+<form action="/$urle" method="post">
+<div class="form-group">
+$T(_this,schema_add(R.y))
+
+<button type="submit" class="btn btn-info">Submit</button>
+<a href="/$url"><div class="btn btn-warning">Cancel</div></a>
+<input type="hidden" name="fu" value="replace">
+</div>    
+</form>
+
+
+</div>
+</div>
+</div>
+
+$footer

@@ -1,0 +1,12 @@
+body { font-family: 'Roboto', sans-serif; color: #444; margin-top: 50px; font-size: 11pt; }
+p { text-align: justify; }
+a { color: #6181bf; }
+a:hover { color: #777; text-decoration: none }
+:target { color: red !important }
+img { max-width: 100%; height: auto; display: block; }
+h1,h2,h3,h4,h5,h6 { font-family: 'Roboto', sans-serif; font-weight: 300; color: #777 }
+hr {border-top: 1px solid #ddd;}
+thead { font-weight: bold; }
+tr { display: table-row; vertical-align: inherit; border-color: inherit; }
+
+pre { border: 1px solid #ddd; background: #f8f8f8; padding: 0.5em }

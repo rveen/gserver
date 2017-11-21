@@ -1,0 +1,25 @@
+$T(_this,header)
+$T(_this,navbar)
+
+<br><br>
+
+<div class="container">
+
+$(a=u)
+
+<h1>Editing <b>$a.x1</b></h1>
+<br>
+
+<form noaction="/data.htm" action="/$u.x0" method="post">
+<div class="form-group">
+$T(_this,schema_edit.(a.y))
+
+<button type="submit" class="btn btn-primary">Submit</button> &nbsp; &nbsp;
+<a href="/$url"><div class="btn btn-warning">Cancel</div></a>
+<input class="form-control" type="hidden" name="fu" value="replace">
+</div>    
+</form>
+
+</div>
+
+$footer

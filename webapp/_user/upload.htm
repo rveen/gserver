@@ -1,0 +1,30 @@
+$T(_this,header)
+$T(_this,navbar)
+
+<div class="container" style="padding-top: 60px">
+<div class="row">
+<div class="col-md-12">
+
+$if(user=="nobody")
+<div class="alert alert-danger">You must be <a href="/login">logged in</a> to upload files</div>
+$end
+
+<h1>Upload to /files/<b>$user</b>/</h1>
+
+<br>
+
+<form action="/$urle" method="post" enctype="multipart/form-data" class="form-horizontal" role="form">
+    <div class="form-group">
+    <label for="a" class="col-sm-2 control-label">File</label>
+    <div class="col-sm-6">
+      <input name="file1" type="file" class="form-control" id="a">
+    </div>
+    <button type="submit" class="btn btn-success">Ok</button>
+</form>
+
+
+</div>
+</div>
+</div>
+
+$footer
