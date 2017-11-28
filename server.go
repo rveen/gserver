@@ -1,7 +1,13 @@
 package gserver
 
 import (
+	"fmt"
+	"io/ioutil"
 	"log"
+	"plugin"
+	"reflect"
+	"strings"
+	"unsafe"
 
 	"github.com/icza/session"
 	"github.com/rveen/gserver/files"
@@ -18,6 +24,7 @@ type Server struct {
 	DocRoot    string
 	UploadDir  string
 	Sessions   session.Manager
+	Plugins    []string
 }
 
 // New prepares a Server{} structure initialized with
@@ -52,9 +59,44 @@ func New() (*Server, error) {
 		for _, rf := range rfs.Out {
 			name := rf.ThisString()
 			host := rf.Get("host").String()
-			log.Println("remote function registered:", name, host)
-			f := rpc.Client{Host: host, Timeout: 1}
+			proto := rf.Get("protocol").Int64(2)
+			log.Println("remote function registered:", name, host, proto)
+			f := rpc.Client{Host: host, Timeout: 1, Protocol: int(proto)}
 			srv.Context.Set(name, f.Call)
+		}
+	}
+
+	// Load plugins
+
+	pluginDir := ".conf/plugin/"
+
+	pp, err := ioutil.ReadDir(pluginDir)
+	if err == nil {
+
+		for _, p := range pp {
+			if !strings.HasSuffix(p.Name(), ".so") {
+				continue
+			}
+			key := p.Name()[0 : len(p.Name())-3]
+			symbol := strings.Title(key)
+
+			pi, err := plugin.Open(pluginDir + p.Name())
+			if err == nil {
+				log.Println("plugin loaded:", p.Name())
+				// inspectPlugin(pi)
+
+				log.Println(" - Expected symbol", symbol)
+
+				fn, err := pi.Lookup(symbol)
+				if err == nil {
+					log.Println(" - Symbol found! Bind to", key)
+					srv.Context.Set(key, fn)
+					log.Println(" - Symbol kind", reflect.ValueOf(fn).Kind().String())
+					srv.Plugins = append(srv.Plugins, key)
+				}
+			} else {
+				log.Println(err)
+			}
 		}
 	}
 
@@ -66,4 +108,20 @@ func New() (*Server, error) {
 	srv.Root = files.New(srv.DocRoot)
 
 	return &srv, nil
+}
+
+type Plug struct {
+	Path    string
+	_       chan struct{}
+	Symbols map[string]interface{}
+}
+
+func inspectPlugin(p *plugin.Plugin) {
+	pl := (*Plug)(unsafe.Pointer(p))
+
+	fmt.Printf("Plugin %s exported symbols (%d): \n", pl.Path, len(pl.Symbols))
+
+	for name, pointers := range pl.Symbols {
+		fmt.Printf("symbol: %s, pointer: %v, type: %v\n", name, pointers, reflect.TypeOf(pointers))
+	}
 }
