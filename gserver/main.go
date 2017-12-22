@@ -18,17 +18,19 @@
 package main
 
 import (
+	"crypto/tls"
 	"flag"
 	"io/ioutil"
 	"log"
 	"net/http"
 	_ "net/http/pprof"
 	"runtime"
+	"strings"
 	"time"
 
-	"github.com/rveen/gserver"
-
 	fr "github.com/DATA-DOG/fastroute"
+	"github.com/rveen/gserver"
+	"golang.org/x/crypto/acme/autocert"
 )
 
 func main() {
@@ -84,13 +86,31 @@ func main() {
 	// redirected to https.
 
 	if len(secureHost) != 0 {
+
+		theHost := secureHost
+		log.Println("secure host:", secureHost)
+		h := strings.Split(secureHost, ":")
+		if len(h) == 2 {
+			theHost = h[0]
+		}
+		log.Println("secure domain:", theHost)
+
+		certManager := autocert.Manager{
+			Prompt:     autocert.AcceptTOS,
+			HostPolicy: autocert.HostWhitelist(theHost),
+			Cache:      autocert.DirCache(".certs"), //folder for storing certificates
+		}
+
 		shttp := &http.Server{
 			Addr:         secureHost,
 			Handler:      router,
 			ReadTimeout:  time.Second * time.Duration(timeout),
 			WriteTimeout: time.Second * time.Duration(timeout),
+			TLSConfig: &tls.Config{
+				GetCertificate: certManager.GetCertificate,
+			},
 		}
-		go serveTLS(shttp)
+		go serveTLS(theHost, shttp)
 
 		s := &http.Server{
 			Addr:         host,
@@ -117,8 +137,12 @@ func redirect(w http.ResponseWriter, r *http.Request) {
 		http.StatusTemporaryRedirect)
 }
 
-func serveTLS(srv *http.Server) {
-	log.Println(srv.ListenAndServeTLS(".conf/cert.pem", ".conf/key.pem"))
+func serveTLS(host string, srv *http.Server) {
+	if host == "localhost" || host == "" {
+		log.Println(srv.ListenAndServeTLS(".certs/cert.pem", ".certs/key.pem"))
+	} else {
+		log.Println(srv.ListenAndServeTLS("", ""))
+	}
 }
 
 func printStatus(srv *gserver.Server) {
