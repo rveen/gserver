@@ -125,6 +125,8 @@ func main() {
 	}
 }
 
+// TODO Check https://github.com/nhooyr/redirecthttp
+
 func redirect(w http.ResponseWriter, r *http.Request) {
 
 	target := "https://" + r.Host + r.URL.Path
@@ -134,7 +136,7 @@ func redirect(w http.ResponseWriter, r *http.Request) {
 	log.Printf("redirect to: %s", target)
 	http.Redirect(w, r, target,
 		// see @andreiavrammsd comment: often 307 > 301
-		http.StatusTemporaryRedirect)
+		http.StatusPermanentRedirect)
 }
 
 func serveTLS(host string, srv *http.Server) {
