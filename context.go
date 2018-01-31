@@ -20,9 +20,9 @@ func LoadContext(context *ogdl.Graph, srv *Server) {
 	InitPlugins(context, srv)
 }
 
-func template(context *ogdl.Graph, template *ogdl.Graph) []byte {
+func template(context *ogdl.Graph, template string) []byte {
 
-	t := ogdl.NewTemplate(template.String())
+	t := ogdl.NewTemplate(template)
 	return t.Process(context)
 }
 

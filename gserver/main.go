@@ -1,4 +1,4 @@
-// Copyright 2017, Rolf Veen and contributors.
+// Copyright 2017-2018, Rolf Veen and contributors.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -35,24 +35,18 @@ import (
 
 func main() {
 
-	// Flags
-	// - set logging ON/off
-	// - set host
-	// - set secure host
-	// - set credential files
-	// - set web root
-	// - set timeout
+	// Bind flags to non-pointer variables. Easier later.
 
 	var logging, verbose bool
 	var host, secureHost string
 	var timeout, sessionTimeout int
 
-	flag.BoolVar(&logging, "log", true, "Turn logging ON/off")
-	flag.BoolVar(&verbose, "v", false, "Turn status message on/OFF")
-	flag.StringVar(&host, "H", ":80", "Set host:port")
-	flag.StringVar(&secureHost, "S", "", "Set secure_host:port")
-	flag.IntVar(&timeout, "t", 10, "Set http(s) timeout (seconds)")
-	flag.IntVar(&sessionTimeout, "ts", 30, "Set session timeout (minutes)")
+	flag.BoolVar(&logging, "log", true, "turn logging ON/off")
+	flag.BoolVar(&verbose, "v", false, "turn periodic status message on/OFF")
+	flag.StringVar(&host, "H", ":80", "set host:port")
+	flag.StringVar(&secureHost, "S", "", "set secure_host:port")
+	flag.IntVar(&timeout, "t", 10, "set http(s) timeout (seconds)")
+	flag.IntVar(&sessionTimeout, "ts", 30, "set session timeout (minutes)")
 
 	flag.Parse()
 
@@ -62,10 +56,6 @@ func main() {
 	if err != nil {
 		log.Println(err.Error())
 		return
-	}
-
-	if verbose {
-		go printStatus(srv)
 	}
 
 	// Router
@@ -82,8 +72,14 @@ func main() {
 		log.SetOutput(ioutil.Discard)
 	}
 
-	// Serve either http or https. In case of https, all requests to http are
-	// redirected to https.
+	if verbose {
+		go printStatus(srv)
+	}
+
+	// Serve either HTTP or HTTPS.
+	// In case of HTTPS, all requests to HTTP are redirected.
+	//
+	// HTTPS served with the aid of Let's Encrypt.
 
 	if len(secureHost) != 0 {
 
