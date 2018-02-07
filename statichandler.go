@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 
 	fr "github.com/DATA-DOG/fastroute"
-	"github.com/icza/session"
 )
 
 // FileHandler processes all paths that exist in the file system starting
@@ -25,23 +24,11 @@ func StaticFileHandler(srv *Server) http.Handler {
 
 		log.Printf("StaticFileHandler path %s user %s\n", path, user)
 
-		// Get a session, whether or not the user has logged in
-		sess := srv.Sessions.Get(r)
-		if sess == nil {
-			sess = session.NewSession()
-			sess.SetAttr("user", "nobody")
-			srv.Sessions.Add(sess, w)
-		} else if r.FormValue("Logout") != "" {
-			log.Println("Logout requested")
-			srv.Sessions.Remove(sess, w)
-			sess = session.NewSession()
-			sess.SetAttr("user", "nobody")
-			srv.Sessions.Add(sess, w)
-		}
-
 		// Get the file
 		path = filepath.Clean(path)
-		file, _, _ := srv.Root.Get(path)
+		file, _, _ := srv.Root.Get(path, false)
+
+		log.Printf("StaticFileHandler path %s (cleaned) %v\n", path, file)
 
 		if file == nil {
 			http.Error(w, http.StatusText(404), 404)

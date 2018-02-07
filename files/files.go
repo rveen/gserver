@@ -87,7 +87,7 @@ func (f *FileEntry) getFile(path string) {
 	// log.Printf("Files.getFile: len %d bytes, type %s ext %s\n", len(f.Content), f.Type, ext)
 }
 
-func (f *Files) Get(path string) (*FileEntry, map[string]string, error) {
+func (f *Files) Get(path string, filterUnderscore bool) (*FileEntry, map[string]string, error) {
 
 	// Prepare and clean path
 	path = filepath.Clean(path)
@@ -119,7 +119,7 @@ func (f *Files) Get(path string) (*FileEntry, map[string]string, error) {
 			return nil, nil, errors.New("path element starting with . not allowed (see files.go)")
 		}
 
-		if part[0] == '_' {
+		if filterUnderscore && part[0] == '_' {
 			return nil, nil, errors.New("path element starting with _. Currently not allowed (see files.go)")
 		}
 
@@ -129,7 +129,6 @@ func (f *Files) Get(path string) (*FileEntry, map[string]string, error) {
 			path += "/" + part
 		}
 	again:
-		// log.Printf("path: %s, dir %s\n", path, dir)
 
 		file, err := os.Stat(path)
 		if err != nil {

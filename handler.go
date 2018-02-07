@@ -2,8 +2,11 @@ package gserver
 
 import (
 	"log"
+	"mime/multipart"
 	"net/http"
+	"os"
 	"path/filepath"
+	"strings"
 
 	// fr "github.com/DATA-DOG/fastroute"
 	"github.com/icza/session"
@@ -54,9 +57,92 @@ func FileHandler(srv *Server) http.Handler {
 			}
 		}
 
+		// Upload files if "UploadFiles" is present
+
+		// Login if requested
+
+		if r.FormValue("UploadFiles") != "" {
+
+			// Handle file uploads. We call ParseMultipartForm here so that r.Form[] is
+			// initialized. If it isn't a multipart this gives an error that we are ignoring.
+			err := r.ParseMultipartForm(10000000) // 10M
+
+			for {
+				if err != nil {
+					break
+				}
+
+				//Where to store the file
+				folder := r.FormValue("folder")
+				if len(folder) == 0 {
+					folder = "default"
+				}
+				if len(folder) > 64 || strings.Contains(folder, "..") {
+					break
+				}
+
+				// Without authenticated user no upload is possible
+				user := sess.Attr("user").(string)
+				if user == "nobody" || len(user) == 0 {
+					break
+				}
+
+				folder = "_user/file/" + user + "/" + folder + "/"
+
+				// Prepare and clean path
+				folder = filepath.Clean(folder)
+
+				os.MkdirAll(folder, 644)
+				buf := make([]byte, 1000000)
+				log.Println("Folder created", folder)
+
+				var file multipart.File
+				var wfile *os.File
+				var n int
+
+				for k := range r.MultipartForm.File {
+
+					vv := r.MultipartForm.File[k]
+
+					for _, v := range vv {
+						//data.Set(k, v.Filename)
+
+						file, err = v.Open()
+						if err != nil {
+							//err2 = err
+							continue
+						}
+
+						log.Println("uploaded", folder+"/"+v.Filename)
+						wfile, err = os.Create(folder + "/" + v.Filename)
+						if err != nil {
+							file.Close()
+							//err2 = err
+							continue
+						}
+
+						for {
+							n, err = file.Read(buf)
+							if n > 0 {
+								wfile.Write(buf[:n])
+							}
+							if err != nil || n <= len(buf) {
+								break
+							}
+						}
+
+						wfile.Close()
+						file.Close()
+					}
+				}
+
+				break
+			}
+		}
+
 		// Get the file
 		url := filepath.Clean(r.URL.Path)
-		file, params, _ := srv.Root.Get(url)
+		file, params, _ := srv.Root.Get(url, true)
 
 		if file == nil {
 			http.Error(w, http.StatusText(404), 404)
@@ -90,15 +176,9 @@ func FileHandler(srv *Server) http.Handler {
 			data := context.Create("R")
 			data.Set("url", r.URL.Path)
 
-			// Handle file uploads. We call ParseMultipartForm here so that r.Form[] is
-			// initialized. If it isn't a multipart this gives an error that we are ignoring.
-			// r.ParseMultipartForm(10000000) // 10M
 			r.ParseForm()
 
 			// Add GET, POST, PUT parameters to context
-			// Sort alphanumerically and remove __N, so
-			// that keys ending in __N go ordered to
-			// one key
 			for k := range r.Form {
 				for _, v := range r.Form[k] {
 					data.Set(k, v)
