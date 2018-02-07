@@ -9,7 +9,7 @@ static content. It is not optimized and not well tested, as of now.
  - Trailing slash and index files detection
  - Markdown rendering on the fly.
  - Login, Logout example functionality
- - TODO: Uploaded files go to files/user/*
+ - Upload files go to /_user/file/$user/$folder/
  - Template functionality extensible through Go plugins
 
 ## Parameter substitution in paths
