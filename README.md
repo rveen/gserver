@@ -38,13 +38,21 @@ There are two routes configured in gserver:
     /:user/file/*filepath
 	/*filepath
 
-The first one goes to a static file handler which will handle files from a
-root configured in .conf/config.g (TODO).
+The first one goes to a static file handler that translates that path to 
+/_user/file/:user/*filepath. This handler doesn't create or need a session.
 
 The second handles the document root with its possible parameter substitution
 mechanism explained above. Any path that has not the form /token/file/* goest
 to this second route.
 
+## File upload
+
+Any POST request with files attached (multipart) and a field named "UploadFiles"
+that is handled by the second handler will store those files in /_user/file/$user/$folder/.
+$user is the current authenticated user and $folder is 'default' or the content of
+a field named 'folder' in the request.
+
+Without an authenticated user no files will be stored in the server.
 
 ## Templates
 
