@@ -57,9 +57,11 @@ Without an authenticated user no files will be stored in the server.
 
 ## Templates
 
+TODO
+
 ## Remote functions
 
-OGDL remote functions (RPC servers) can be configured in .conf/config:
+OGDL remote functions (RPC endpoints) can be configured in .conf/config:
 
     ogdlrf
       git
