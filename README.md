@@ -46,6 +46,10 @@ mechanism explained above, creates sessions, processes file uploads and template
 
 Any path that has not the form /token/file/* goes to this second route.
 
+The static handler will not return paths with elements that start with a dot.
+The dynamic handler, in addition, will ignore path with elements starting with an 
+underscore, since these are reserved for variables.
+
 ## File upload
 
 Any POST request with files attached (multipart) and a field named "UploadFiles"
@@ -80,6 +84,10 @@ request context. Public methods in those plugins can then be accessed in templat
 If a plugin database.so is present, a Database object is expected which will be
 placed in the context so that $database.Method() can be called in the template.
 
+## Markdown processor ($MD())
+
+TODO: describe the extensions and the \escape inline syntax for processing style
+and function calls.
 
 
 
