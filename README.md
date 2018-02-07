@@ -39,7 +39,7 @@ There are two routes configured in gserver:
 	/*filepath
 
 The first one goes to a static file handler that translates that path to 
-/_user/file/:user/*filepath. This handler doesn't create or need a session.
+/_user/file/:user/*filepath. This handler doesn't create or need sessions.
 
 The second goes to a handler that uses the parameter substitution
 mechanism explained above, creates sessions, processes file uploads and templates. 
