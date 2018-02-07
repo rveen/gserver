@@ -55,6 +55,8 @@ a field named 'folder' in the request.
 
 Without an authenticated user no files will be stored in the server.
 
+TODO: public and private files (ACL, casbin?)
+
 ## Templates
 
 TODO
