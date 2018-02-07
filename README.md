@@ -41,9 +41,10 @@ There are two routes configured in gserver:
 The first one goes to a static file handler that translates that path to 
 /_user/file/:user/*filepath. This handler doesn't create or need a session.
 
-The second handles the document root with its possible parameter substitution
-mechanism explained above. Any path that has not the form /token/file/* goest
-to this second route.
+The second goes to a handler that uses the parameter substitution
+mechanism explained above, creates sessions, processes file uploads and templates. 
+
+Any path that has not the form /token/file/* goes to this second route.
 
 ## File upload
 
