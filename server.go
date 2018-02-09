@@ -1,18 +1,23 @@
 package gserver
 
 import (
+	"crypto/tls"
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net/http"
 	"plugin"
 	"reflect"
 	"strings"
+	"time"
 	"unsafe"
 
+	fr "github.com/DATA-DOG/fastroute"
 	"github.com/icza/session"
 	"github.com/rveen/gserver/files"
 	"github.com/rveen/ogdl"
 	rpc "github.com/rveen/ogdl/ogdlrf"
+	"golang.org/x/crypto/acme/autocert"
 )
 
 type Server struct {
@@ -108,6 +113,70 @@ func New() (*Server, error) {
 	srv.Root = files.New(srv.DocRoot)
 
 	return &srv, nil
+}
+
+func (srv *Server) Serve(host string, secure bool, timeout int, router fr.Router) {
+	// Serve either HTTP or HTTPS.
+	// In case of HTTPS, all requests to HTTP are redirected.
+	//
+	// HTTPS served with the aid of Let's Encrypt.
+
+	if secure {
+
+		shost := host
+		h := strings.Split(shost, ":")
+		if len(h) == 2 {
+			shost = h[0]
+		}
+
+		certManager := autocert.Manager{
+			Prompt:     autocert.AcceptTOS,
+			HostPolicy: autocert.HostWhitelist(shost),
+			Cache:      autocert.DirCache(".certs"), //folder for storing certificates
+		}
+
+		shttp := &http.Server{
+			Addr:         shost,
+			Handler:      router,
+			ReadTimeout:  time.Second * time.Duration(timeout),
+			WriteTimeout: time.Second * time.Duration(timeout),
+			TLSConfig: &tls.Config{
+				GetCertificate: certManager.GetCertificate,
+			},
+		}
+		go serveTLS(shost, shttp)
+
+		s := &http.Server{
+			Addr:         host,
+			Handler:      http.HandlerFunc(redirect),
+			ReadTimeout:  time.Second * time.Duration(timeout),
+			WriteTimeout: time.Second * time.Duration(timeout),
+		}
+		log.Println("starting SSL (with redirect from non-SSL)")
+		s.ListenAndServe()
+	} else {
+		log.Println(http.ListenAndServe(host, router))
+	}
+}
+
+func redirect(w http.ResponseWriter, r *http.Request) {
+
+	target := "https://" + r.Host + r.URL.Path
+	if len(r.URL.RawQuery) != 0 {
+		target += "?" + r.URL.RawQuery
+	}
+	log.Printf("redirect to: %s", target)
+	http.Redirect(w, r, target,
+		// see @andreiavrammsd comment: often 307 > 301
+		http.StatusPermanentRedirect)
+}
+
+func serveTLS(host string, srv *http.Server) {
+	if host == "localhost" || host == "" {
+		log.Println(srv.ListenAndServeTLS(".certs/cert.pem", ".certs/key.pem"))
+	} else {
+		log.Println(srv.ListenAndServeTLS("", ""))
+	}
 }
 
 type Plug struct {

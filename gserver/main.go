@@ -2,35 +2,19 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// gserver is a web server adapted to serve OGDL templates besides static content.
-//
-// Features:
-// - The file extension of files in the web/ area is optional
-// - Trailing slash and index files detection
-// - Login and Logout detection in forms.
-// - Uploaded files go to files/user/<folder>/*
-//
-// How are templates identified ?
-//
-// - Router with * and ?
-// - Anything not in /static/
-//
 package main
 
 import (
-	"crypto/tls"
 	"flag"
 	"io/ioutil"
 	"log"
 	"net/http"
 	_ "net/http/pprof"
 	"runtime"
-	"strings"
 	"time"
 
 	fr "github.com/DATA-DOG/fastroute"
 	"github.com/rveen/gserver"
-	"golang.org/x/crypto/acme/autocert"
 )
 
 func main() {
@@ -50,7 +34,11 @@ func main() {
 
 	flag.Parse()
 
-	// Set up a Server{} structure
+	secure := false
+	if secureHost != "" {
+		host = secureHost
+		secure = true
+	}
 
 	srv, err := gserver.New()
 	if err != nil {
@@ -76,71 +64,7 @@ func main() {
 		go printStatus(srv)
 	}
 
-	// Serve either HTTP or HTTPS.
-	// In case of HTTPS, all requests to HTTP are redirected.
-	//
-	// HTTPS served with the aid of Let's Encrypt.
-
-	if len(secureHost) != 0 {
-
-		theHost := secureHost
-		log.Println("secure host:", secureHost)
-		h := strings.Split(secureHost, ":")
-		if len(h) == 2 {
-			theHost = h[0]
-		}
-		log.Println("secure domain:", theHost)
-
-		certManager := autocert.Manager{
-			Prompt:     autocert.AcceptTOS,
-			HostPolicy: autocert.HostWhitelist(theHost),
-			Cache:      autocert.DirCache(".certs"), //folder for storing certificates
-		}
-
-		shttp := &http.Server{
-			Addr:         secureHost,
-			Handler:      router,
-			ReadTimeout:  time.Second * time.Duration(timeout),
-			WriteTimeout: time.Second * time.Duration(timeout),
-			TLSConfig: &tls.Config{
-				GetCertificate: certManager.GetCertificate,
-			},
-		}
-		go serveTLS(theHost, shttp)
-
-		s := &http.Server{
-			Addr:         host,
-			Handler:      http.HandlerFunc(redirect),
-			ReadTimeout:  time.Second * time.Duration(timeout),
-			WriteTimeout: time.Second * time.Duration(timeout),
-		}
-		log.Println("starting SSL (with redirect from non-SSL)")
-		s.ListenAndServe()
-	} else {
-		log.Println(http.ListenAndServe(host, router))
-	}
-}
-
-// TODO Check https://github.com/nhooyr/redirecthttp
-
-func redirect(w http.ResponseWriter, r *http.Request) {
-
-	target := "https://" + r.Host + r.URL.Path
-	if len(r.URL.RawQuery) != 0 {
-		target += "?" + r.URL.RawQuery
-	}
-	log.Printf("redirect to: %s", target)
-	http.Redirect(w, r, target,
-		// see @andreiavrammsd comment: often 307 > 301
-		http.StatusPermanentRedirect)
-}
-
-func serveTLS(host string, srv *http.Server) {
-	if host == "localhost" || host == "" {
-		log.Println(srv.ListenAndServeTLS(".certs/cert.pem", ".certs/key.pem"))
-	} else {
-		log.Println(srv.ListenAndServeTLS("", ""))
-	}
+	srv.Serve(host, secure, timeout, router)
 }
 
 func printStatus(srv *gserver.Server) {
