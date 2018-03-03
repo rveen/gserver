@@ -181,7 +181,14 @@ func FileHandler(srv *Server) http.Handler {
 			// Add GET, POST, PUT parameters to context
 			for k := range r.Form {
 				for _, v := range r.Form[k] {
-					data.Set(k, v)
+					// Check for _ogdl
+					if strings.HasSuffix(k, "._ogdl") {
+						k = k[0 : len(k)-6]
+						g := ogdl.FromString(v)
+						data.Set(k, g)
+					} else {
+						data.Set(k, v)
+					}
 				}
 			}
 

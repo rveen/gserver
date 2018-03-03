@@ -89,5 +89,31 @@ placed in the context so that $database.Method() can be called in the template.
 TODO: describe the extensions and the \escape inline syntax for processing style
 and function calls.
 
+## Form to context
+
+Form inputs are stored in the request's context and made directly accessible. Input
+names are taken as simple paths (tokens separated by dots), and the special case where
+the name ends with ._ogdl is parsed as OGDL before stored in the context.
+
+For example, the content of the following form:
+
+    <form>
+	<input name="obj.name" />
+	<input name="obj.conf._ogdl"/>
+	
+could be something like this:
+
+    obj
+      name
+	    "Pepe Delgado"
+	  conf
+	    ip
+		  192.160.1.1
+		net
+		  255.255.255.0
+
+
+	  
+
 
 
