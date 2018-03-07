@@ -20,6 +20,10 @@ import (
 	"golang.org/x/crypto/acme/autocert"
 )
 
+type login interface {
+	Auth(r *http.Request, s *Server) (string, error)
+}
+
 type Server struct {
 	Host       string
 	SecureHost string
@@ -30,6 +34,7 @@ type Server struct {
 	UploadDir  string
 	Sessions   session.Manager
 	Plugins    []string
+	Login      login
 }
 
 // New prepares a Server{} structure initialized with
@@ -70,6 +75,9 @@ func New() (*Server, error) {
 			srv.Context.Set(name, f.Call)
 		}
 	}
+
+	// Default Auth
+	srv.Login = LoginService{}
 
 	// Load plugins
 

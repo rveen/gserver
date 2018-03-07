@@ -45,7 +45,7 @@ func FileHandler(srv *Server) http.Handler {
 		if r.FormValue("Login") != "" {
 
 			// Here the code to access an identity service
-			user, err := LoginService(r, srv)
+			user, err := srv.Login.Auth(r, srv)
 
 			log.Println("Login requested", user)
 
