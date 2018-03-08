@@ -114,9 +114,9 @@ could be something like this:
 
 ## Login, Logout
 
-There is no specific path for login or logout. Any request which is not a static
-file will handle the parameters 'Login' and 'Logout' if present. The default login
-handler accepts any non-empty username and any password.
+There is no specific path for login or logout. Any request which does not go to
+the static file handler will recognize the parameters 'Login' and 'Logout'
+if present. The default login handler accepts any non-empty username and any password.
 
 The 'redirect' parameter can be used to send the user to a specific page after
 login. The default behavior is to return to the same page.
