@@ -105,12 +105,12 @@ could be something like this:
 
     obj
       name
-	    "Pepe Delgado"
-	  conf
-	    ip
-		  192.160.1.1
-		net
-		  255.255.255.0
+        "Pepe Delgado"
+      conf
+        ip
+          192.160.1.1
+        net
+          255.255.255.0
 
 ## Login, Logout
 
