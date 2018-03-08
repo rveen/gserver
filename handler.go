@@ -51,6 +51,13 @@ func FileHandler(srv *Server) http.Handler {
 
 			if err == nil {
 				sess.SetAttr("user", user)
+				if rdir := r.FormValue("redirect"); rdir != "" {
+					if rdir == "_user" {
+						rdir = "/" + user
+					}
+					http.Redirect(w, r, rdir, 302)
+					return
+				}
 			} else {
 				http.Error(w, http.StatusText(401), 401)
 				return

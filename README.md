@@ -38,16 +38,16 @@ There are two routes configured in gserver:
     /:user/file/*filepath
 	/*filepath
 
-The first one goes to a static file handler that translates that path to 
+The first one goes to a static file handler that translates that path to
 /_user/file/:user/*filepath. This handler doesn't create or need sessions.
 
 The second goes to a handler that uses the parameter substitution
-mechanism explained above, creates sessions, processes file uploads and templates. 
+mechanism explained above, creates sessions, processes file uploads and templates.
 
 Any path that has not the form /token/file/* goes to this second route.
 
 The static handler will not return paths with elements that start with a dot.
-The dynamic handler, in addition, will ignore path with elements starting with an 
+The dynamic handler, in addition, will ignore path with elements starting with an
 underscore, since these are reserved for variables.
 
 ## File upload
@@ -100,7 +100,7 @@ For example, the content of the following form:
     <form>
 	<input name="obj.name" />
 	<input name="obj.conf._ogdl"/>
-	
+
 could be something like this:
 
     obj
@@ -112,8 +112,15 @@ could be something like this:
 		net
 		  255.255.255.0
 
+## Login, Logout
 
-	  
+There is no specific path for login or logout. Any request which is not a static
+file will handle the parameters 'Login' and 'Logout' if present. The default login
+handler accepts any non-empty username and any password.
+
+The 'redirect' parameter can be used to send the user to a specific page after
+login. The default behavior is to return to the same page.
+
 
 
 
