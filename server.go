@@ -55,13 +55,13 @@ func New() (*Server, error) {
 	srv.Host = ":8080"
 
 	// Server configuration file (optional)
-	srv.Config = ogdl.FromFile(".conf/config.g")
+	srv.Config = ogdl.FromFile(".conf/config.ogdl")
 	if srv.Config == nil {
 		srv.Config = ogdl.New()
 	}
 
 	// Base context for templates (optional)
-	srv.Context = ogdl.FromFile(".conf/context.g")
+	srv.Context = ogdl.FromFile(".conf/context.ogdl")
 
 	// Register remote functions
 	rfs := srv.Config.Get("ogdlrf")
