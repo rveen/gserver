@@ -91,9 +91,10 @@ and function calls.
 
 ## Form to context
 
-Form inputs are stored in the request's context and made directly accessible. Input
-names are taken as simple paths (tokens separated by dots), and the special case where
-the name ends with ._ogdl is parsed as OGDL before stored in the context.
+Form inputs are stored in the request's context and made directly accessible in 
+templates. Input names are taken as simple paths (tokens separated by dots), and 
+the special case where the name ends with ._ogdl is parsed as OGDL before stored 
+in the context.
 
 For example, the content of the following form:
 
