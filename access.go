@@ -6,12 +6,14 @@ import (
 	"strings"
 )
 
-func LoginService(r *http.Request, s *Server) (string, error) {
+type LoginService struct{}
+
+func (l LoginService) Auth(r *http.Request, s *Server) (string, error) {
 
 	user := r.PostFormValue("User")
-	pass := r.PostFormValue("Password")
+	// pass := r.PostFormValue("Password")
 
-	if pass == "" && user != "" {
+	if user != "" {
 		return strings.ToLower(user), nil
 	}
 

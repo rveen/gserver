@@ -20,6 +20,10 @@ import (
 	"golang.org/x/crypto/acme/autocert"
 )
 
+type login interface {
+	Auth(r *http.Request, s *Server) (string, error)
+}
+
 type Server struct {
 	Host       string
 	SecureHost string
@@ -30,6 +34,7 @@ type Server struct {
 	UploadDir  string
 	Sessions   session.Manager
 	Plugins    []string
+	Login      login
 }
 
 // New prepares a Server{} structure initialized with
@@ -50,13 +55,13 @@ func New() (*Server, error) {
 	srv.Host = ":8080"
 
 	// Server configuration file (optional)
-	srv.Config = ogdl.FromFile(".conf/config.g")
+	srv.Config = ogdl.FromFile(".conf/config.ogdl")
 	if srv.Config == nil {
 		srv.Config = ogdl.New()
 	}
 
 	// Base context for templates (optional)
-	srv.Context = ogdl.FromFile(".conf/context.g")
+	srv.Context = ogdl.FromFile(".conf/context.ogdl")
 
 	// Register remote functions
 	rfs := srv.Config.Get("ogdlrf")
@@ -70,6 +75,9 @@ func New() (*Server, error) {
 			srv.Context.Set(name, f.Call)
 		}
 	}
+
+	// Default Auth
+	srv.Login = LoginService{}
 
 	// Load plugins
 

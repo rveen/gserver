@@ -45,12 +45,19 @@ func FileHandler(srv *Server) http.Handler {
 		if r.FormValue("Login") != "" {
 
 			// Here the code to access an identity service
-			user, err := LoginService(r, srv)
+			user, err := srv.Login.Auth(r, srv)
 
 			log.Println("Login requested", user)
 
 			if err == nil {
 				sess.SetAttr("user", user)
+				if rdir := r.FormValue("redirect"); rdir != "" {
+					if rdir == "_user" {
+						rdir = "/" + user
+					}
+					http.Redirect(w, r, rdir, 302)
+					return
+				}
 			} else {
 				http.Error(w, http.StatusText(401), 401)
 				return
