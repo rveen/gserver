@@ -24,17 +24,22 @@ type login interface {
 	Auth(r *http.Request, s *Server) (string, error)
 }
 
+type contextService interface {
+	Load(*ogdl.Graph, *Server)
+}
+
 type Server struct {
-	Host       string
-	SecureHost string
-	Config     *ogdl.Graph
-	Context    *ogdl.Graph
-	Root       *files.Files
-	DocRoot    string
-	UploadDir  string
-	Sessions   session.Manager
-	Plugins    []string
-	Login      login
+	Host           string
+	SecureHost     string
+	Config         *ogdl.Graph
+	Context        *ogdl.Graph
+	Root           *files.Files
+	DocRoot        string
+	UploadDir      string
+	Sessions       session.Manager
+	Plugins        []string
+	Login          login
+	ContextService contextService
 }
 
 // New prepares a Server{} structure initialized with
@@ -78,6 +83,9 @@ func New() (*Server, error) {
 
 	// Default Auth
 	srv.Login = LoginService{}
+
+	// Default context builder
+	srv.ContextService = ContextService{}
 
 	// Load plugins
 

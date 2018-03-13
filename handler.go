@@ -173,7 +173,7 @@ func FileHandler(srv *Server) http.Handler {
 				context = ogdl.New()
 				context.Copy(srv.Context)
 				sess.SetAttr("context", context)
-				LoadContext(context, srv)
+				srv.ContextService.Load(context, srv)
 			} else {
 				context = i.(*ogdl.Graph)
 			}
