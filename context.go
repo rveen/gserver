@@ -11,9 +11,11 @@ import (
 	"github.com/rveen/ogdl"
 )
 
+type ContextService struct{}
+
 // Load the context for template processing
 //
-func LoadContext(context *ogdl.Graph, srv *Server) {
+func (c ContextService) Load(context *ogdl.Graph, srv *Server) {
 	context.Set("T", template)
 	context.Set("MD", xmarkdown)
 	context.Set("files", &files.Files{})
