@@ -28,6 +28,10 @@ type contextService interface {
 	Load(*ogdl.Graph, *Server)
 }
 
+type domainConfig interface {
+	GetConfig(*ogdl.Graph, string, int) *ogdl.Graph
+}
+
 type Server struct {
 	Host           string
 	SecureHost     string
@@ -40,6 +44,7 @@ type Server struct {
 	Plugins        []string
 	Login          login
 	ContextService contextService
+	DomainConfig   domainConfig
 }
 
 // New prepares a Server{} structure initialized with

@@ -32,7 +32,8 @@ import (
 )
 
 type Files struct {
-	Root string
+	Root      string
+	GetConfig func(reqctx *ogdl.Graph, par string, level int) *ogdl.Graph
 }
 
 type FileEntry struct {
@@ -87,7 +88,9 @@ func (f *FileEntry) getFile(path string) {
 	// log.Printf("Files.getFile: len %d bytes, type %s ext %s\n", len(f.Content), f.Type, ext)
 }
 
-func (f *Files) Get(path string, filterUnderscore bool) (*FileEntry, map[string]string, error) {
+func (f *Files) Get(path string, filterUnderscore bool, ctx *ogdl.Graph) (*FileEntry, map[string]string, error) {
+
+	log.Println("files.Get:" + path)
 
 	// Prepare and clean path
 	path = filepath.Clean(path)
@@ -107,8 +110,12 @@ func (f *Files) Get(path string, filterUnderscore bool) (*FileEntry, map[string]
 	fe := &FileEntry{}
 
 	v := make(map[string]string)
+	n := -1
 
-	for _, part := range parts {
+	for i := 0; i < len(parts); i++ {
+		n++
+
+		part := parts[i]
 
 		// protection agains starting slash
 		if part == "" {
@@ -129,8 +136,9 @@ func (f *Files) Get(path string, filterUnderscore bool) (*FileEntry, map[string]
 			path += "/" + part
 		}
 	again:
-
 		file, err := os.Stat(path)
+		log.Println("files.Get stat:", path, dir)
+
 		if err != nil {
 			// Could exist with some extension extension or be a parameter
 
@@ -154,12 +162,21 @@ func (f *Files) Get(path string, filterUnderscore bool) (*FileEntry, map[string]
 			}
 
 			// any entry starting with _ ?
+
 			for _, fi := range d {
 				name := fi.Name()
 
 				if name[0] == '_' {
-					v[name[1:]] = part
-					path = dir + "/" + name
+
+					r := f.inList(ctx, name, part, parts, n)
+					if r != "" {
+						v["path"] = r
+						path = dir + "/" + name + "/path"
+						i = len(parts)
+					} else {
+						v[name[1:]] = part
+						path = dir + "/" + name
+					}
 					goto again
 				}
 			}
@@ -184,4 +201,43 @@ func (f *Files) Get(path string, filterUnderscore bool) (*FileEntry, map[string]
 	}
 
 	return fe, v, nil
+}
+
+func (f *Files) inList(ctx *ogdl.Graph, name, part string, parts []string, n int) string {
+
+	if f.GetConfig == nil {
+		return ""
+	}
+
+	// Load the domain configuration if any
+	ctx.Set("R."+name[1:], part)
+	g := f.GetConfig(ctx, name[1:], n)
+
+	log.Println("inList", name, part, n)
+
+	if g == nil || len(parts) <= n+1 {
+		return ""
+	}
+
+	list := g.Get("staticURLs")
+
+	if list == nil {
+		return ""
+	}
+
+	log.Println("inList (2)")
+
+	// TODO esto es caca
+	remaining := parts[n+1]
+	for j := n + 2; j < len(parts); j++ {
+		remaining += "/" + parts[j]
+	}
+
+	if list.Node(remaining) == nil {
+		return ""
+	}
+
+	// Found ! path is in domain's 'static' list
+	// the rest of the parts are substituted by one: path
+	return remaining
 }

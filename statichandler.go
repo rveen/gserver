@@ -26,9 +26,9 @@ func StaticFileHandler(srv *Server) http.Handler {
 
 		// Get the file
 		path = filepath.Clean(path)
-		file, _, _ := srv.Root.Get(path, false)
+		file, _, _ := srv.Root.Get(path, false, nil)
 
-		log.Printf("StaticFileHandler path %s (cleaned) %v\n", path, file)
+		log.Printf("StaticFileHandler path %s (cleaned)\n", path)
 
 		if file == nil {
 			http.Error(w, http.StatusText(404), 404)

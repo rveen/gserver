@@ -147,13 +147,51 @@ func FileHandler(srv *Server) http.Handler {
 			}
 		}
 
+		// Create the context (early because of files.Get)
+		var context *ogdl.Graph
+		i := sess.Attr("context")
+
+		if i == nil {
+			context = ogdl.New()
+			context.Copy(srv.Context)
+			sess.SetAttr("context", context)
+			srv.ContextService.Load(context, srv)
+		} else {
+			context = i.(*ogdl.Graph)
+		}
+		context.Set("user", sess.Attr("user"))
+		context.Substitute("$_user", sess.Attr("user"))
+
+		data := context.Create("R")
+		data.Set("url", r.URL.Path)
+
+		r.ParseForm()
+
+		// Add GET, POST, PUT parameters to context
+		for k := range r.Form {
+			for _, v := range r.Form[k] {
+				// Check for _ogdl
+				if strings.HasSuffix(k, "._ogdl") {
+					k = k[0 : len(k)-6]
+					g := ogdl.FromString(v)
+					data.Set(k, g)
+				} else {
+					data.Set(k, v)
+				}
+			}
+		}
+
 		// Get the file
 		url := filepath.Clean(r.URL.Path)
-		file, params, _ := srv.Root.Get(url, true)
+		file, params, _ := srv.Root.Get(url, true, context)
 
 		if file == nil {
 			http.Error(w, http.StatusText(404), 404)
 			return
+		}
+
+		for k, v := range params {
+			data.Set(k, v)
 		}
 
 		// log.Println("FileHandler", url, file.Type)
@@ -166,42 +204,6 @@ func FileHandler(srv *Server) http.Handler {
 		// GET, POST, FilePath parameters, and user have to be added
 
 		if file.Type == "t" || file.Type == "m" {
-			var context *ogdl.Graph
-			i := sess.Attr("context")
-
-			if i == nil {
-				context = ogdl.New()
-				context.Copy(srv.Context)
-				sess.SetAttr("context", context)
-				srv.ContextService.Load(context, srv)
-			} else {
-				context = i.(*ogdl.Graph)
-			}
-			context.Set("user", sess.Attr("user"))
-			context.Substitute("$_user", sess.Attr("user"))
-
-			data := context.Create("R")
-			data.Set("url", r.URL.Path)
-
-			r.ParseForm()
-
-			// Add GET, POST, PUT parameters to context
-			for k := range r.Form {
-				for _, v := range r.Form[k] {
-					// Check for _ogdl
-					if strings.HasSuffix(k, "._ogdl") {
-						k = k[0 : len(k)-6]
-						g := ogdl.FromString(v)
-						data.Set(k, g)
-					} else {
-						data.Set(k, v)
-					}
-				}
-			}
-
-			for k, v := range params {
-				data.Set(k, v)
-			}
 
 			if file.Type == "t" {
 				buf = file.Tree.Process(context)
