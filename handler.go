@@ -81,9 +81,9 @@ func FileHandler(srv *Server) http.Handler {
 
 				//Where to store the file
 				folder := r.FormValue("folder")
-				if len(folder) == 0 {
-					folder = "default"
-				}
+				folder = filepath.Clean(folder)
+				log.Println("upload to folder", folder)
+
 				if len(folder) > 64 || strings.Contains(folder, "..") {
 					break
 				}
@@ -194,9 +194,11 @@ func FileHandler(srv *Server) http.Handler {
 			data.Set(k, v)
 		}
 
-		// log.Println("FileHandler", url, file.Type)
+		log.Println("FileHandler", url, file.Type)
 
 		buf := file.Content
+
+		log.Println("FileHandler point 0")
 
 		// If we serve a template, create a Context for it.
 		// The base context comes from context.g
@@ -204,7 +206,6 @@ func FileHandler(srv *Server) http.Handler {
 		// GET, POST, FilePath parameters, and user have to be added
 
 		if file.Type == "t" || file.Type == "m" {
-
 			if file.Type == "t" {
 				buf = file.Tree.Process(context)
 			} else {
@@ -228,6 +229,7 @@ func FileHandler(srv *Server) http.Handler {
 		} else {
 			w.Write(buf)
 		}
+
 	}
 
 	return http.HandlerFunc(fn)
