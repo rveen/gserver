@@ -3,46 +3,38 @@ package gserver
 import (
 	"log"
 	"net/http"
-	"path/filepath"
+
+	"github.com/rveen/golib/fs"
 
 	fr "github.com/DATA-DOG/fastroute"
 )
 
-// FileHandler processes all paths that exist in the file system starting
-// from the root directory, whether they are static files or templates or markdown.
-//
-// NOTE This handler is a final one. If the path doesn't exist, it returns 'Not found'
-// NOTE This handler needs context information (access to Server{})
-// NOTE See https://github.com/bpowers/seshcookie
+// StaticFileHandler returns a handler that processes static files.
 //
 func StaticFileHandler(srv *Server) http.Handler {
 
 	fn := func(w http.ResponseWriter, r *http.Request) {
 
+		// These parameters come from the router: "/:user/file/*filepath"
 		user := fr.Parameters(r).ByName("user")
 		path := "files/" + user + fr.Parameters(r).ByName("filepath")
 
 		log.Printf("StaticFileHandler path %s user %s\n", path, user)
 
 		// Get the file
-		path = filepath.Clean(path)
-		file, _, _ := srv.Root.Get(path, false, nil)
-
-		log.Printf("StaticFileHandler path %s (cleaned)\n", path)
+		file, _ := fs.Get(srv.Root, path, "")
 
 		if file == nil {
 			http.Error(w, http.StatusText(404), 404)
 			return
 		}
 
-		// log.Println("FileHandler", url, file.Type)
-
-		buf := file.Content
+		buf := file.Content()
 
 		// Set Content-Type (MIME type)
 		// <!doctype html> makes the browser picky about mime types. This is stupid.
-		if len(file.Mime) > 0 {
-			w.Header().Set("Content-Type", file.Mime)
+		if len(file.Mime()) > 0 {
+			w.Header().Set("Content-Type", file.Mime())
 		}
 
 		// Content-Length is set automatically in the Go http lib.

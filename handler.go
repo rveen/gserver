@@ -1,6 +1,7 @@
 package gserver
 
 import (
+	"errors"
 	"log"
 	"mime/multipart"
 	"net/http"
@@ -8,67 +9,39 @@ import (
 	"path/filepath"
 	"strings"
 
-	// fr "github.com/DATA-DOG/fastroute"
 	"github.com/icza/session"
+	"github.com/rveen/golib/fs"
 	"github.com/rveen/ogdl"
 )
 
-// FileHandler processes all paths that exist in the file system starting
+var ErrZeroLength = errors.New("Zero length file")
+
+// FileHandler returns a handler that processes all paths that exist in the file system starting
 // from the root directory, whether they are static files or templates or markdown.
 //
 // NOTE This handler is a final one. If the path doesn't exist, it returns 'Not found'
 // NOTE This handler needs context information (access to Server{})
 // NOTE See https://github.com/bpowers/seshcookie
+// TODO serve files with http.ServeContent (handles large files with Range requests)
 //
 func FileHandler(srv *Server) http.Handler {
 
 	fn := func(w http.ResponseWriter, r *http.Request) {
 
-		//log.Printf("FileHandler pattern %s\n----\n%v\n---\n", fr.Pattern(r), fr.Parameters(r))
+		// Get the user from the form. This is set in loginHandler()
+		user := r.FormValue("user")
 
 		// Get a session, whether or not the user has logged in
 		sess := srv.Sessions.Get(r)
 		if sess == nil {
 			sess = session.NewSession()
-			sess.SetAttr("user", "nobody")
-			srv.Sessions.Add(sess, w)
-		} else if r.FormValue("Logout") != "" {
-			log.Println("Logout requested")
-			srv.Sessions.Remove(sess, w)
-			sess = session.NewSession()
-			sess.SetAttr("user", "nobody")
+			sess.SetAttr("user", user)
 			srv.Sessions.Add(sess, w)
 		}
 
-		// Login if requested
+		// Upload files if "UploadFiles" is present (a session and valid user are needed)
 
-		if r.FormValue("Login") != "" {
-
-			// Here the code to access an identity service
-			user, err := srv.Login.Auth(r, srv)
-
-			log.Println("Login requested", user)
-
-			if err == nil {
-				sess.SetAttr("user", user)
-				if rdir := r.FormValue("redirect"); rdir != "" {
-					if rdir == "_user" {
-						rdir = "/" + user
-					}
-					http.Redirect(w, r, rdir, 302)
-					return
-				}
-			} else {
-				http.Error(w, http.StatusText(401), 401)
-				return
-			}
-		}
-
-		// Upload files if "UploadFiles" is present
-
-		// Login if requested
-
-		if r.FormValue("UploadFiles") != "" {
+		if user != "nobody" && r.FormValue("UploadFiles") != "" {
 
 			// Handle file uploads. We call ParseMultipartForm here so that r.Form[] is
 			// initialized. If it isn't a multipart this gives an error that we are ignoring.
@@ -79,7 +52,7 @@ func FileHandler(srv *Server) http.Handler {
 					break
 				}
 
-				//Where to store the file
+				// Where to store the file
 				folder := r.FormValue("folder")
 				folder = filepath.Clean(folder)
 				log.Println("upload to folder", folder)
@@ -152,22 +125,22 @@ func FileHandler(srv *Server) http.Handler {
 		i := sess.Attr("context")
 
 		if i == nil {
-			context = ogdl.New()
+			context = ogdl.New(nil)
 			context.Copy(srv.Context)
 			sess.SetAttr("context", context)
 			srv.ContextService.Load(context, srv)
 		} else {
 			context = i.(*ogdl.Graph)
 		}
-		context.Set("user", sess.Attr("user"))
-		context.Substitute("$_user", sess.Attr("user"))
+		context.Set("user", user)
+		context.Substitute("$_user", user)
 
 		data := context.Create("R")
-		data.Set("url", r.URL.Path)
+		data.Set("url", filepath.Clean(r.URL.Path))
 
 		r.ParseForm()
 
-		// Add GET, POST, PUT parameters to context
+		// Add GET, POST, PUT parameters into context
 		for k := range r.Form {
 			for _, v := range r.Form[k] {
 				// Check for _ogdl
@@ -183,49 +156,118 @@ func FileHandler(srv *Server) http.Handler {
 
 		// Get the file
 		url := filepath.Clean(r.URL.Path)
-		file, params, _ := srv.Root.Get(url, true, context)
+		file, err := fs.Get(srv.Root, url, "")
 
 		if file == nil {
 			http.Error(w, http.StatusText(404), 404)
 			return
 		}
 
-		for k, v := range params {
+		file.Prepare()
+
+		for k, v := range file.Param() {
 			data.Set(k, v)
 		}
 
-		log.Println("FileHandler", url, file.Type)
+		context.Set("path.meta", file.Info())
+		context.Set("path.tree", file.Tree())
 
-		buf := file.Content
+		log.Println("FileHandler", url, file.Type(), file.Name())
 
-		log.Println("FileHandler point 0")
+		buf := file.Content()
 
-		// If we serve a template, create a Context for it.
-		// The base context comes from context.g
+		// Process templates
 		//
-		// GET, POST, FilePath parameters, and user have to be added
+		// Some types have predefined templates, some ARE templates. Predefined
+		// templates are taken from the main context, while the content (this
+		// path) is injected into the context so that the template can pick it up.
 
-		if file.Type == "t" || file.Type == "m" {
-			if file.Type == "t" {
-				buf = file.Tree.Process(context)
+		switch file.Type() {
+		case "t":
+			buf = file.Tree().Process(context)
+		case "m":
+			buf = file.Tree().Process(context)
+
+			context.Set("path.content", string(buf))
+
+			tplx := ""
+			if strings.HasPrefix(strings.ToLower(filepath.Base(file.Name())), "readme.") {
+				tplx = context.Get("template.mddir").String()
 			} else {
-				buf = context.Get("mdheader").Process(context)
-				buf2 := context.Get("mdfooter").Process(context)
-				buf = append(buf, append(file.Content, buf2...)...)
+				tplx = context.Get("template.md").String()
+			}
+
+			if tplx != "" {
+				// TODO preprocess templates !!
+				tpl := ogdl.NewTemplate(tplx)
+				buf = tpl.Process(context)
+			} else {
+				err = errors.New("Template not fount for type " + file.Type())
+			}
+
+		case "nb":
+			context.Set("path.content", file.Content())
+
+			tplx := ""
+			if strings.HasPrefix(strings.ToLower(filepath.Base(file.Name())), "readme.") {
+				tplx = context.Get("template.nb").String()
+			} else {
+				tplx = context.Get("template.nb").String()
+			}
+
+			if tplx != "" {
+				// TODO preprocess templates !!
+				tpl := ogdl.NewTemplate(tplx)
+				buf = tpl.Process(context)
+			} else {
+				err = errors.New("Template not fount for type " + file.Type())
+			}
+
+		case "dir", "data/ogdl":
+
+			// does the tree contain a template spec?
+			tpln := file.Tree().Get("template").String()
+			tplx := ""
+			if tpln != "" {
+				tplx = context.Get("template." + tpln).String()
+			} else {
+				if file.Type() == "dir" {
+					tplx = context.Get("template.dir").String()
+				} else {
+					tplx = context.Get("template.data").String()
+				}
+			}
+			if tplx != "" {
+				// TODO preprocess templates !!
+				tpl := ogdl.NewTemplate(tplx)
+				buf = tpl.Process(context)
+
+				//log.Println(" - template", tplx, file.Tree.Text())
+			} else {
+				err = errors.New("Template not fount for type " + file.Type())
 			}
 		}
 
 		// Set Content-Type (MIME type)
 		// <!doctype html> makes the browser picky about mime types. This is stupid.
-		if len(file.Mime) > 0 {
-			w.Header().Set("Content-Type", file.Mime)
+		if len(file.Mime()) > 0 {
+			w.Header().Set("Content-Type", file.Mime())
 		}
+
+		// w.Header().Set("Content-Disposition", "inline; filename=\"b.pdf\"")
 
 		// Content-Length is set automatically in the Go http lib.
 
 		if len(buf) == 0 {
-			log.Println("Zero length file")
-			http.Error(w, "Zero length file", 500)
+			if file.Tree() != nil {
+				w.Write([]byte(file.Tree().Text()))
+			} else {
+				if err == nil {
+					err = ErrZeroLength
+				}
+				log.Println(err.Error())
+				http.Error(w, err.Error(), 500)
+			}
 		} else {
 			w.Write(buf)
 		}
@@ -233,5 +275,4 @@ func FileHandler(srv *Server) http.Handler {
 	}
 
 	return http.HandlerFunc(fn)
-
 }

@@ -12,9 +12,10 @@ import (
 	"time"
 	"unsafe"
 
+	"github.com/rveen/golib/fs"
+
 	fr "github.com/DATA-DOG/fastroute"
 	"github.com/icza/session"
-	"github.com/rveen/gserver/files"
 	"github.com/rveen/ogdl"
 	rpc "github.com/rveen/ogdl/ogdlrf"
 	"golang.org/x/crypto/acme/autocert"
@@ -22,6 +23,8 @@ import (
 
 type login interface {
 	Auth(r *http.Request, s *Server) (string, error)
+	AuthByCookie(r *http.Request) string
+	SetCookie(w http.ResponseWriter, user string)
 }
 
 type contextService interface {
@@ -37,7 +40,7 @@ type Server struct {
 	SecureHost     string
 	Config         *ogdl.Graph
 	Context        *ogdl.Graph
-	Root           *files.Files
+	Root           fs.FileSystem
 	DocRoot        string
 	UploadDir      string
 	Sessions       session.Manager
@@ -67,7 +70,7 @@ func New() (*Server, error) {
 	// Server configuration file (optional)
 	srv.Config = ogdl.FromFile(".conf/config.ogdl")
 	if srv.Config == nil {
-		srv.Config = ogdl.New()
+		srv.Config = ogdl.New(nil)
 	}
 
 	// Base context for templates (optional)
@@ -87,7 +90,7 @@ func New() (*Server, error) {
 	}
 
 	// Default Auth
-	srv.Login = LoginService{}
+	// srv.Login = LoginService{}
 
 	// Default context builder
 	srv.ContextService = ContextService{}
@@ -128,15 +131,15 @@ func New() (*Server, error) {
 
 	// Session manager
 	session.Global.Close()
-	srv.Sessions = session.NewCookieManagerOptions(session.NewInMemStore(), &session.CookieMngrOptions{AllowHTTP: true})
+	srv.Sessions = session.NewCookieManagerOptions(session.NewInMemStore(), &session.CookieMngrOptions{AllowHTTP: true, CookieMaxAge: time.Hour * 24 * 90})
 
 	// File cache
-	srv.Root = files.New(srv.DocRoot)
+	// srv.Root = fs.New(srv.DocRoot)
 
 	return &srv, nil
 }
 
-func (srv *Server) Serve(host string, secure bool, timeout int, router fr.Router) {
+func (srv *Server) Serve(host_port string, secure bool, timeout int, router fr.Router) {
 	// Serve either HTTP or HTTPS.
 	// In case of HTTPS, all requests to HTTP are redirected.
 	//
@@ -144,20 +147,20 @@ func (srv *Server) Serve(host string, secure bool, timeout int, router fr.Router
 
 	if secure {
 
-		shost := host
-		h := strings.Split(shost, ":")
+		hostname := host_port
+		h := strings.Split(host_port, ":")
 		if len(h) == 2 {
-			shost = h[0]
+			hostname = h[0]
 		}
 
 		certManager := autocert.Manager{
 			Prompt:     autocert.AcceptTOS,
-			HostPolicy: autocert.HostWhitelist(shost),
+			HostPolicy: autocert.HostWhitelist(hostname),
 			Cache:      autocert.DirCache(".certs"), //folder for storing certificates
 		}
 
 		shttp := &http.Server{
-			Addr:         shost,
+			Addr:         host_port,
 			Handler:      router,
 			ReadTimeout:  time.Second * time.Duration(timeout),
 			WriteTimeout: time.Second * time.Duration(timeout),
@@ -165,18 +168,18 @@ func (srv *Server) Serve(host string, secure bool, timeout int, router fr.Router
 				GetCertificate: certManager.GetCertificate,
 			},
 		}
-		go serveTLS(shost, shttp)
+		go serveTLS(hostname, shttp)
 
 		s := &http.Server{
-			Addr:         host,
-			Handler:      http.HandlerFunc(redirect),
+			Addr:         hostname + ":80",
+			Handler:      certManager.HTTPHandler(nil), //http.HandlerFunc(redirect),
 			ReadTimeout:  time.Second * time.Duration(timeout),
 			WriteTimeout: time.Second * time.Duration(timeout),
 		}
-		log.Println("starting SSL (with redirect from non-SSL)")
+		log.Println("starting SSL (with redirect from non-SSL). Hostname is", hostname)
 		s.ListenAndServe()
 	} else {
-		log.Println(http.ListenAndServe(host, router))
+		log.Println(http.ListenAndServe(host_port, router))
 	}
 }
 

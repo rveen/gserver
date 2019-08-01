@@ -1,7 +1,43 @@
-// Copyright 2017-2018, Rolf Veen and contributors.
+// Copyright 2017-2019, Rolf Veen and contributors.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// TODO See https://medium.com/@matryer/how-i-write-go-http-services-after-seven-years-37c208122831
+
+// Gserver is a web server.
+//
+// Summary of features
+//
+// Gserver is a web server with the following features:
+//
+//  - Any path of the form /[user]/file/* is served as static (StaticHandler) and
+//    converted to /files/user/*
+//  - Any other path is handled by Handler as follows.
+//  - Path elements of the form _n (n = number) are taken as revision numbers
+//  - Path elements of the form _t (t != number) are taken as variables
+//  - Extensions of files are optional (if the file name is unique)
+//  - index.* (if found) is returned for paths that point to directories.
+//  - OGDL templates are processed
+//  - Markdown is processed
+//  - The root directory must be a standard directory. Below there can be versioned
+//    repositories
+//  - The path can continue into data files and documents (markdown)
+//
+// Authentication and sessions
+//
+// - htpasswd, SVN Auth, ACL
+//
+// Templates
+//
+//
+// TODO
+//
+// - relative paths (for images, etc)
+//
+// - math notebook / wiki / forms
+//
+// - resumable file uploader
+//
 package main
 
 import (
@@ -13,8 +49,11 @@ import (
 	"runtime"
 	"time"
 
-	fr "github.com/DATA-DOG/fastroute"
+	"github.com/rveen/golib/fs"
 	"github.com/rveen/gserver"
+
+	fr "github.com/DATA-DOG/fastroute"
+	"github.com/justinas/alice"
 )
 
 func main() {
@@ -46,14 +85,23 @@ func main() {
 		return
 	}
 
+	// srv.Login = gserver.LoginService{}
+	srv.ContextService = gserver.ContextService{}
+	srv.DomainConfig = gserver.DomainConfig{}
+	//	srv.Root.GetConfig = gserver.DomainConfig.GetConfig
+
+	// Middleware chains
+	staticHandler := alice.New(gserver.LoginAdapter(srv), gserver.AccessAdapter("bla")).Then(gserver.StaticFileHandler(srv))
+	dynamicHandler := alice.New(gserver.LoginAdapter(srv), gserver.AccessAdapter("bla")).Then(gserver.FileHandler(srv))
+
 	// Router
 	// (see github.com/DATA-DOG/fastroute for all the possibilities of this router).
 
 	router := fr.RouterFunc(func(req *http.Request) http.Handler {
-		return fr.Chain(fr.New("/:user/file/*filepath", gserver.StaticFileHandler(srv)), fr.New("/*filepath", gserver.FileHandler(srv)))
+		return fr.Chain(fr.New("/:user/file/*filepath", staticHandler), fr.New("/*filepath", dynamicHandler))
 	})
 
-	log.Println("Server starting, ", runtime.NumCPU(), "procs")
+	log.Println("TruServer starting, ", runtime.NumCPU(), "procs")
 
 	if logging == false {
 		println("further logging disabled!")
@@ -63,6 +111,9 @@ func main() {
 	if verbose {
 		go printStatus(srv)
 	}
+
+	// Overwrite the original file handler with this one
+	srv.Root = fs.New(srv.DocRoot)
 
 	srv.Serve(host, secure, timeout, router)
 }

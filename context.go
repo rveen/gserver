@@ -1,9 +1,12 @@
 package gserver
 
 import (
-	"golib/files"
 	"log"
 	"reflect"
+
+	"github.com/rveen/golib/document"
+	"github.com/rveen/golib/files"
+	"github.com/rveen/gserver/html"
 
 	"github.com/microcosm-cc/bluemonday"
 	"github.com/miekg/mmark"
@@ -18,14 +21,22 @@ type ContextService struct{}
 func (c ContextService) Load(context *ogdl.Graph, srv *Server) {
 	context.Set("T", template)
 	context.Set("MD", xmarkdown)
+	// context.Set("MDX", xxmarkdown)
+	context.Set("DOC", doc)
 	context.Set("files", &files.Files{})
+	context.Set("html", &html.Html{})
 	InitPlugins(context, srv)
 }
 
 func template(context *ogdl.Graph, template string) []byte {
-
 	t := ogdl.NewTemplate(template)
 	return t.Process(context)
+}
+
+func doc(context *ogdl.Graph, doc string) []byte {
+	d, _ := document.New(doc)
+	s := document.ToHtml(d)
+	return []byte(s)
 }
 
 func markdown(s string) []byte {
@@ -48,6 +59,13 @@ func xmarkdown(s string) []byte {
 	renderer := mmark.HtmlRenderer(htmlFlags, "", "")
 	return mmark.Parse([]byte(s), renderer, extensions).Bytes()
 }
+
+// MDX processes extended markdown
+/*
+func xxmarkdown(s string) []byte {
+	out, _ := md.ToHtml([]byte(s))
+	return out
+}*/
 
 func InitPlugins(context *ogdl.Graph, srv *Server) {
 
@@ -85,4 +103,28 @@ func InitPlugins(context *ogdl.Graph, srv *Server) {
 
 		context.Set(plugin, fn)
 	}
+}
+
+type DomainConfig struct{}
+
+var tpl = ogdl.NewTemplate("$(u=conector.Search('id1=1 x0='+R.user+' y=h')) $(u=u.result.item)")
+
+func (d DomainConfig) GetConfig(ctx *ogdl.Graph, domain string, level int) *ogdl.Graph {
+
+	log.Println("GetConfig", domain, ctx.Get("R.user").String())
+
+	u := ctx.Get("u")
+
+	if u.Len() > 0 {
+		d := u.Get("x0").String()
+		if d == domain {
+			return u
+		}
+	}
+
+	tpl.Process(ctx)
+	u = ctx.Get("u")
+	log.Println("GetConfig: u loaded from conector")
+	return u
+
 }
