@@ -136,7 +136,8 @@ func FileHandler(srv *Server) http.Handler {
 		context.Substitute("$_user", user)
 
 		data := context.Create("R")
-		data.Set("url", filepath.Clean(r.URL.Path))
+		url := filepath.Clean(r.URL.Path)
+		data.Set("url", url)
 
 		r.ParseForm()
 
@@ -155,12 +156,20 @@ func FileHandler(srv *Server) http.Handler {
 		}
 
 		// Get the file
-		url := filepath.Clean(r.URL.Path)
 		file, err := fs.Get(srv.Root, url, "")
 
 		if file == nil {
 			http.Error(w, http.StatusText(404), 404)
 			return
+		}
+
+		// Set R.urlbase (for setting <base href="R.urlbase"> allowing relative URLs
+		st, err := os.Stat(srv.Root.Root() + "/" + url)
+		if err == nil && st.IsDir() {
+			data.Set("urlbase", url)
+		} else {
+			// Remove the file part
+			data.Set("urlbase", filepath.Dir(url))
 		}
 
 		file.Prepare()
@@ -175,6 +184,8 @@ func FileHandler(srv *Server) http.Handler {
 		log.Println("FileHandler", url, file.Type(), file.Name())
 
 		buf := file.Content()
+
+		log.Println("Handler: output length:", len(buf), ", type: ", file.Type())
 
 		// Process templates
 		//
@@ -196,6 +207,8 @@ func FileHandler(srv *Server) http.Handler {
 			} else {
 				tplx = context.Get("template.md").String()
 			}
+
+			// log.Println("Handler: md: ", string(buf))
 
 			if tplx != "" {
 				// TODO preprocess templates !!
@@ -269,6 +282,7 @@ func FileHandler(srv *Server) http.Handler {
 				http.Error(w, err.Error(), 500)
 			}
 		} else {
+			log.Println("Handler: writing to output", len(buf))
 			w.Write(buf)
 		}
 

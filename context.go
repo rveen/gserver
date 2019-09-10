@@ -8,9 +8,9 @@ import (
 	"github.com/rveen/golib/files"
 	"github.com/rveen/gserver/html"
 
-	"github.com/microcosm-cc/bluemonday"
+	"github.com/gomarkdown/markdown"
+	"github.com/gomarkdown/markdown/parser"
 	"github.com/miekg/mmark"
-	"github.com/russross/blackfriday"
 	"github.com/rveen/ogdl"
 )
 
@@ -20,8 +20,8 @@ type ContextService struct{}
 //
 func (c ContextService) Load(context *ogdl.Graph, srv *Server) {
 	context.Set("T", template)
-	context.Set("MD", xmarkdown)
-	// context.Set("MDX", xxmarkdown)
+	context.Set("MD", xxmarkdown)
+	context.Set("MDX", xmarkdown)
 	context.Set("DOC", doc)
 	context.Set("files", &files.Files{})
 	context.Set("html", &html.Html{})
@@ -37,11 +37,6 @@ func doc(context *ogdl.Graph, doc string) []byte {
 	d, _ := document.New(doc)
 	s := document.ToHtml(d)
 	return []byte(s)
-}
-
-func markdown(s string) []byte {
-	u := blackfriday.MarkdownCommon([]byte(s))
-	return bluemonday.UGCPolicy().SanitizeBytes(u)
 }
 
 const extensions int = mmark.EXTENSION_TABLES | mmark.EXTENSION_FENCED_CODE |
@@ -61,11 +56,17 @@ func xmarkdown(s string) []byte {
 }
 
 // MDX processes extended markdown
-/*
+
 func xxmarkdown(s string) []byte {
-	out, _ := md.ToHtml([]byte(s))
-	return out
-}*/
+
+	//extensions := parser.NoIntraEmphasis | parser.Tables | parser.FencedCode |
+	//	parser.Autolink | parser.Strikethrough | parser.SpaceHeadings | parser.HeadingIDs |
+	//	parser.BackslashLineBreak | parser.DefinitionLists
+	extensions := parser.CommonExtensions | parser.AutoHeadingIDs
+	p := parser.NewWithExtensions(extensions)
+	println("----------------> xxmarkdown()")
+	return markdown.ToHTML([]byte(s), p, nil)
+}
 
 func InitPlugins(context *ogdl.Graph, srv *Server) {
 
