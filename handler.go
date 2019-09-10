@@ -165,12 +165,14 @@ func FileHandler(srv *Server) http.Handler {
 
 		// Set R.urlbase (for setting <base href="R.urlbase"> allowing relative URLs
 		st, err := os.Stat(srv.Root.Root() + "/" + url)
-		if err == nil && st.IsDir() {
-			data.Set("urlbase", url)
-		} else {
+		if err == nil && !st.IsDir() {
 			// Remove the file part
-			data.Set("urlbase", filepath.Dir(url))
+			url = filepath.Dir(url)
 		}
+		if len(url) != 0 && url[len(url)-1] != '/' {
+			url += "/"
+		}
+		data.Set("urlbase", url)
 
 		file.Prepare()
 
