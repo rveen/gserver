@@ -91,14 +91,16 @@ func main() {
 	//	srv.Root.GetConfig = gserver.DomainConfig.GetConfig
 
 	// Middleware chains
-	staticHandler := alice.New(gserver.LoginAdapter(srv), gserver.AccessAdapter("bla")).Then(gserver.StaticFileHandler(srv))
+	// staticHandler := alice.New(gserver.LoginAdapter(srv), gserver.AccessAdapter("bla")).Then(gserver.StaticFileHandler(srv))
+	staticHandler := gserver.StaticFileHandler(srv)
+	staticUserHandler := alice.New(gserver.LoginAdapter(srv), gserver.AccessAdapter("bla")).Then(gserver.StaticUserFileHandler(srv))
 	dynamicHandler := alice.New(gserver.LoginAdapter(srv), gserver.AccessAdapter("bla")).Then(gserver.FileHandler(srv))
 
 	// Router
 	// (see github.com/DATA-DOG/fastroute for all the possibilities of this router).
 
 	router := fr.RouterFunc(func(req *http.Request) http.Handler {
-		return fr.Chain(fr.New("/:user/file/*filepath", staticHandler), fr.New("/*filepath", dynamicHandler))
+		return fr.Chain(fr.New("/static/*filepath", staticHandler), fr.New("/:user/file/*filepath", staticUserHandler), fr.New("/*filepath", dynamicHandler))
 	})
 
 	log.Println("TruServer starting, ", runtime.NumCPU(), "procs")
