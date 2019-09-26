@@ -152,7 +152,7 @@ func setCookie(w http.ResponseWriter, user string) {
 
 // Access control
 
-var enforcer *acl.Acl
+var enforcer *acl.ACL
 
 func checkAccess(user, path string) bool {
 
@@ -167,7 +167,7 @@ func checkAccess(user, path string) bool {
 	println("ACL: ", user, path)
 
 	if enforcer == nil {
-		enforcer, _ = acl.NewAcl(".conf/acl.conf")
+		enforcer, _ = acl.New(".conf/acl.conf")
 		if enforcer == nil {
 			return true
 		}

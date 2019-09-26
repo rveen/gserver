@@ -8,9 +8,9 @@ import (
 	"github.com/rveen/golib/files"
 	"github.com/rveen/gserver/html"
 
-	"github.com/gomarkdown/markdown"
-	"github.com/gomarkdown/markdown/parser"
 	"github.com/miekg/mmark"
+	"github.com/rveen/markdown"
+	"github.com/rveen/markdown/parser"
 	"github.com/rveen/ogdl"
 )
 

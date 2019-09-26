@@ -157,6 +157,26 @@ func submenu(g *ogdl.Graph, buf bytes.Buffer, pre string) {
 
 }
 
+func (h Html) ChecklistHighlight(s string) string {
+
+	s = strings.ReplaceAll(s, "<li>☐", "<li class='checklist'><span style='color: orange'>☐</span>")
+	s = strings.ReplaceAll(s, "<li>☒", "<li class='checklist'><span style='color: red'>☒</span>")
+	s = strings.ReplaceAll(s, "<li>☑", "<li class='checklist'><span style='color: green'>☑</span>")
+
+	s = strings.ReplaceAll(s, "[!]", "<span style='color: orange'>⚠</span>")
+
+	return s
+}
+
+func (h Html) ChecklistDone(s string) int {
+	return strings.Count(s, "☑")
+}
+
+func (h Html) ChecklistPending(s string) int {
+
+	return strings.Count(s, "☐")
+}
+
 func (h Html) Breadcrumb(url string) string {
 
 	println("breadcrumb ", url)
