@@ -18,6 +18,15 @@ func (h Html) IsImage(p string) bool {
 	return false
 }
 
+// TODO move this elsewhere
+func (h Html) RepoBase(path, base string) string {
+
+	if strings.HasPrefix(path, base) {
+		return path[len(base):]
+	}
+	return path
+}
+
 func (h Html) Menu(g *ogdl.Graph, pre string) string {
 
 	var buf bytes.Buffer

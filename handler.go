@@ -138,6 +138,7 @@ func FileHandler(srv *Server) http.Handler {
 		data := context.Create("R")
 		url := filepath.Clean(r.URL.Path)
 		data.Set("url", url)
+		data.Set("home", srv.Root.Root())
 
 		r.ParseForm()
 
@@ -196,6 +197,28 @@ func FileHandler(srv *Server) http.Handler {
 		// path) is injected into the context so that the template can pick it up.
 
 		switch file.Type() {
+		case "revs":
+
+			// Get the template used for revision lists
+			tplx := context.Get("template.revs").String()
+
+			// The data is in file.Tree()
+			context.Set("path.data", file.Tree())
+
+			name := filepath.Base(file.Name())
+			if name[len(name)-1] == '@' {
+				name = name[:len(name)-1]
+			}
+			context.Set("path.filename", name)
+
+			if tplx != "" {
+				// TODO preprocess templates !!
+				tpl := ogdl.NewTemplate(tplx)
+				buf = tpl.Process(context)
+			} else {
+				err = errors.New("Template not fount for type " + file.Type())
+			}
+
 		case "t":
 			buf = file.Tree().Process(context)
 		case "m":
