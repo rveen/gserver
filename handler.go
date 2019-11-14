@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/icza/session"
-	"github.com/rveen/golib/fs"
+	"github.com/rveen/golib/fs/sysfs"
 	"github.com/rveen/ogdl"
 )
 
@@ -157,7 +157,7 @@ func FileHandler(srv *Server) http.Handler {
 		}
 
 		// Get the file
-		file, err := fs.Get(srv.Root, url, "")
+		file, err := sysfs.Get(srv.Root, url, "")
 
 		if file == nil {
 			http.Error(w, http.StatusText(404), 404)

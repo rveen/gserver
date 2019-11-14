@@ -4,7 +4,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/rveen/golib/fs"
+	"github.com/rveen/golib/fs/sysfs"
 
 	fr "github.com/DATA-DOG/fastroute"
 )
@@ -22,7 +22,7 @@ func StaticUserFileHandler(srv *Server) http.Handler {
 		log.Printf("StaticUserFileHandler path %s user %s\n", path, user)
 
 		// Get the file
-		file, _ := fs.Get(srv.Root, path, "")
+		file, _ := sysfs.Get(srv.Root, path, "")
 
 		if file == nil {
 			http.Error(w, http.StatusText(404), 404)
@@ -63,7 +63,7 @@ func StaticFileHandler(srv *Server) http.Handler {
 		// log.Printf("StaticFileHandler path %s\n", path)
 
 		// Get the file
-		file, _ := fs.Get(srv.Root, path, "")
+		file, _ := sysfs.Get(srv.Root, path, "")
 
 		if file == nil {
 			http.Error(w, http.StatusText(404), 404)

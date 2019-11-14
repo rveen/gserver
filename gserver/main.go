@@ -49,7 +49,7 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/rveen/golib/fs"
+	"github.com/rveen/golib/fs/sysfs"
 	"github.com/rveen/gserver"
 
 	fr "github.com/DATA-DOG/fastroute"
@@ -115,7 +115,7 @@ func main() {
 	}
 
 	// Overwrite the original file handler with this one
-	srv.Root = fs.New(srv.DocRoot)
+	srv.Root = sysfs.New(srv.DocRoot)
 
 	srv.Serve(host, secure, timeout, router)
 }
