@@ -183,6 +183,7 @@ func FileHandler(srv *Server) http.Handler {
 
 		context.Set("path.meta", file.Info())
 		context.Set("path.tree", file.Tree())
+		context.Set("path.content", "")
 
 		log.Println("FileHandler", url, file.Type(), file.Name())
 
