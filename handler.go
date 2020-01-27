@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/icza/session"
-	"github.com/rveen/golib/fs/sysfs"
 	"github.com/rveen/ogdl"
 )
 
@@ -157,7 +156,7 @@ func FileHandler(srv *Server) http.Handler {
 		}
 
 		// Get the file
-		file, err := sysfs.Get(srv.Root, url, "")
+		file, err := srv.Root.Get(url, "")
 
 		if file == nil {
 			http.Error(w, http.StatusText(404), 404)
@@ -177,19 +176,19 @@ func FileHandler(srv *Server) http.Handler {
 
 		file.Prepare()
 
-		for k, v := range file.Param() {
+		for k, v := range file.Param {
 			data.Set(k, v)
 		}
 
-		context.Set("path.meta", file.Info())
-		context.Set("path.tree", file.Tree())
+		context.Set("path.meta", file.Info)
+		context.Set("path.tree", file.Data)
 		context.Set("path.content", "")
 
-		log.Println("FileHandler", url, file.Type(), file.Name())
+		log.Println("FileHandler", url, file.Typ, file.Name)
 
-		buf := file.Content()
+		buf := file.Content
 
-		log.Println("Handler: output length:", len(buf), ", type: ", file.Type())
+		log.Println("Handler: output length:", len(buf), ", type: ", file.Typ)
 
 		// Process templates
 		//
@@ -197,16 +196,16 @@ func FileHandler(srv *Server) http.Handler {
 		// templates are taken from the main context, while the content (this
 		// path) is injected into the context so that the template can pick it up.
 
-		switch file.Type() {
+		switch file.Typ {
 		case "revs":
 
 			// Get the template used for revision lists
 			tplx := context.Get("template.revs").String()
 
 			// The data is in file.Tree()
-			context.Set("path.data", file.Tree())
+			context.Set("path.data", file.Data)
 
-			name := filepath.Base(file.Name())
+			name := filepath.Base(file.Name)
 			if name[len(name)-1] == '@' {
 				name = name[:len(name)-1]
 			}
@@ -217,18 +216,18 @@ func FileHandler(srv *Server) http.Handler {
 				tpl := ogdl.NewTemplate(tplx)
 				buf = tpl.Process(context)
 			} else {
-				err = errors.New("Template not fount for type " + file.Type())
+				err = errors.New("Template not fount for type " + file.Typ)
 			}
 
 		case "t":
-			buf = file.Tree().Process(context)
+			buf = file.Data.Process(context)
 		case "m":
-			buf = file.Tree().Process(context)
+			buf = file.Data.Process(context)
 
 			context.Set("path.content", string(buf))
 
 			tplx := ""
-			if strings.HasPrefix(strings.ToLower(filepath.Base(file.Name())), "readme.") {
+			if strings.HasPrefix(strings.ToLower(filepath.Base(file.Name)), "readme.") {
 				tplx = context.Get("template.mddir").String()
 			} else {
 				tplx = context.Get("template.md").String()
@@ -241,14 +240,14 @@ func FileHandler(srv *Server) http.Handler {
 				tpl := ogdl.NewTemplate(tplx)
 				buf = tpl.Process(context)
 			} else {
-				err = errors.New("Template not fount for type " + file.Type())
+				err = errors.New("Template not fount for type " + file.Typ)
 			}
 
 		case "nb":
-			context.Set("path.content", file.Content())
+			context.Set("path.content", file.Content)
 
 			tplx := ""
-			if strings.HasPrefix(strings.ToLower(filepath.Base(file.Name())), "readme.") {
+			if strings.HasPrefix(strings.ToLower(filepath.Base(file.Name)), "readme.") {
 				tplx = context.Get("template.nb").String()
 			} else {
 				tplx = context.Get("template.nb").String()
@@ -259,18 +258,18 @@ func FileHandler(srv *Server) http.Handler {
 				tpl := ogdl.NewTemplate(tplx)
 				buf = tpl.Process(context)
 			} else {
-				err = errors.New("Template not fount for type " + file.Type())
+				err = errors.New("Template not fount for type " + file.Typ)
 			}
 
 		case "dir", "data/ogdl":
 
 			// does the tree contain a template spec?
-			tpln := file.Tree().Get("template").String()
+			tpln := file.Data.Get("template").String()
 			tplx := ""
 			if tpln != "" {
 				tplx = context.Get("template." + tpln).String()
 			} else {
-				if file.Type() == "dir" {
+				if file.Typ == "dir" {
 					tplx = context.Get("template.dir").String()
 				} else {
 					tplx = context.Get("template.data").String()
@@ -283,14 +282,14 @@ func FileHandler(srv *Server) http.Handler {
 
 				//log.Println(" - template", tplx, file.Tree.Text())
 			} else {
-				err = errors.New("Template not fount for type " + file.Type())
+				err = errors.New("Template not fount for type " + file.Typ)
 			}
 		}
 
 		// Set Content-Type (MIME type)
 		// <!doctype html> makes the browser picky about mime types. This is stupid.
-		if len(file.Mime()) > 0 {
-			w.Header().Set("Content-Type", file.Mime())
+		if len(file.Mime) > 0 {
+			w.Header().Set("Content-Type", file.Mime)
 		}
 
 		// w.Header().Set("Content-Disposition", "inline; filename=\"b.pdf\"")
@@ -298,8 +297,8 @@ func FileHandler(srv *Server) http.Handler {
 		// Content-Length is set automatically in the Go http lib.
 
 		if len(buf) == 0 {
-			if file.Tree() != nil {
-				w.Write([]byte(file.Tree().Text()))
+			if file.Data != nil {
+				w.Write([]byte(file.Data.Text()))
 			} else {
 				if err == nil {
 					err = ErrZeroLength

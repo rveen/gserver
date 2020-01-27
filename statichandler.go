@@ -4,8 +4,6 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/rveen/golib/fs/sysfs"
-
 	fr "github.com/DATA-DOG/fastroute"
 )
 
@@ -22,20 +20,20 @@ func StaticUserFileHandler(srv *Server) http.Handler {
 		log.Printf("StaticUserFileHandler path %s user %s\n", path, user)
 
 		// Get the file
-		file, _ := sysfs.Get(srv.Root, path, "")
+		file, _ := srv.Root.Get(path, "")
 
 		if file == nil {
 			http.Error(w, http.StatusText(404), 404)
 			return
 		}
 
-		buf := file.Content()
+		buf := file.Content
 
 		// Set Content-Type (MIME type)
 		// <!doctype html> makes the browser picky about mime types. This is stupid.
 		// TODO check that we get the correct Mime here!
-		if len(file.Type()) > 0 {
-			w.Header().Set("Content-Type", file.Type())
+		if len(file.Typ) > 0 {
+			w.Header().Set("Content-Type", file.Typ)
 		}
 
 		// Content-Length is set automatically in the Go http lib.
@@ -63,23 +61,23 @@ func StaticFileHandler(srv *Server) http.Handler {
 		// log.Printf("StaticFileHandler path %s\n", path)
 
 		// Get the file
-		file, _ := sysfs.Get(srv.Root, path, "")
+		file, _ := srv.Root.Get(path, "")
 
 		if file == nil {
 			http.Error(w, http.StatusText(404), 404)
 			return
 		}
 
-		buf := file.Content()
+		buf := file.Content
 
 		// Set Content-Type (MIME type)
 		// <!doctype html> makes the browser picky about mime types. This is stupid.
 		// TODO check that we get the correct Mime here!
-		if len(file.Type()) > 0 {
-			w.Header().Set("Content-Type", file.Type())
+		if len(file.Typ) > 0 {
+			w.Header().Set("Content-Type", file.Typ)
 		}
 
-		log.Printf("StaticFileHandler path %s mime %s\n", path, file.Mime())
+		log.Printf("StaticFileHandler path %s mime %s\n", path, file.Mime)
 
 		// Content-Length is set automatically in the Go http lib.
 
