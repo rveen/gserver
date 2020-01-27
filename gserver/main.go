@@ -103,7 +103,7 @@ func main() {
 		return fr.Chain(fr.New("/static/*filepath", staticHandler), fr.New("/:user/file/*filepath", staticUserHandler), fr.New("/*filepath", dynamicHandler))
 	})
 
-	log.Println("TruServer starting, ", runtime.NumCPU(), "procs")
+	log.Println("gserver starting, ", runtime.NumCPU(), "procs")
 
 	if logging == false {
 		println("further logging disabled!")

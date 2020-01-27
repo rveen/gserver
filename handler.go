@@ -181,7 +181,7 @@ func FileHandler(srv *Server) http.Handler {
 		}
 
 		context.Set("path.meta", file.Info)
-		context.Set("path.tree", file.Data)
+		context.Set("path.data", file.Data)
 		context.Set("path.content", "")
 
 		log.Println("FileHandler", url, file.Typ, file.Name)
@@ -220,9 +220,9 @@ func FileHandler(srv *Server) http.Handler {
 			}
 
 		case "t":
-			buf = file.Data.Process(context)
+			buf = file.Template.Process(context)
 		case "m":
-			buf = file.Data.Process(context)
+			buf = file.Template.Process(context)
 
 			context.Set("path.content", string(buf))
 
