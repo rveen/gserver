@@ -23,7 +23,7 @@ var ErrZeroLength = errors.New("Zero length file")
 // NOTE See https://github.com/bpowers/seshcookie
 // TODO serve files with http.ServeContent (handles large files with Range requests)
 //
-func FileHandler(srv *Server) http.Handler {
+func FileHandler(srv *Server, host bool) http.Handler {
 
 	fn := func(w http.ResponseWriter, r *http.Request) {
 
@@ -125,7 +125,11 @@ func FileHandler(srv *Server) http.Handler {
 
 		if i == nil {
 			context = ogdl.New(nil)
-			context.Copy(srv.Context)
+			if !host {
+				context.Copy(srv.Context)
+			} else {
+				context.Copy(srv.HostContexts[r.Host])
+			}
 			sess.SetAttr("context", context)
 			srv.ContextService.Load(context, srv)
 		} else {
@@ -156,8 +160,16 @@ func FileHandler(srv *Server) http.Handler {
 		}
 
 		// Get the file
-		file, err := srv.Root.Get(url, "")
+		path := url
+		if host {
+			path = r.Host + "/" + path
+		}
+		file, err := srv.Root.Get(path, "")
 
+		if err != nil {
+			http.Error(w, err.Error(), 500)
+			return
+		}
 		if file == nil {
 			http.Error(w, http.StatusText(404), 404)
 			return
@@ -184,11 +196,11 @@ func FileHandler(srv *Server) http.Handler {
 		context.Set("path.data", file.Data)
 		context.Set("path.content", "")
 
-		log.Println("FileHandler", url, file.Typ, file.Name)
+		log.Println("FileHandler", path, file.Typ, file.Name)
 
 		buf := file.Content
 
-		log.Println("Handler: output length:", len(buf), ", type: ", file.Typ)
+		// log.Println("Handler: output length:", len(buf), ", type: ", file.Typ)
 
 		// Process templates
 		//
@@ -232,8 +244,6 @@ func FileHandler(srv *Server) http.Handler {
 			} else {
 				tplx = context.Get("template.md").String()
 			}
-
-			// log.Println("Handler: md: ", string(buf))
 
 			if tplx != "" {
 				// TODO preprocess templates !!

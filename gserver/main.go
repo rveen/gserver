@@ -51,6 +51,7 @@ import (
 
 	"github.com/rveen/golib/fs"
 	"github.com/rveen/gserver"
+	"github.com/rveen/gserver/context"
 
 	fr "github.com/DATA-DOG/fastroute"
 	"github.com/justinas/alice"
@@ -60,11 +61,12 @@ func main() {
 
 	// Bind flags to non-pointer variables. Easier later.
 
-	var logging, verbose bool
+	var logging, verbose, hosts bool
 	var host, secureHost string
 	var timeout, sessionTimeout int
 
 	flag.BoolVar(&logging, "log", true, "turn logging ON/off")
+	flag.BoolVar(&hosts, "m", false, "enable multiple hosts (path on disk are affected")
 	flag.BoolVar(&verbose, "v", false, "turn periodic status message on/OFF")
 	flag.StringVar(&host, "H", ":80", "set host:port")
 	flag.StringVar(&secureHost, "S", "", "set secure_host:port")
@@ -86,14 +88,14 @@ func main() {
 	}
 
 	// srv.Login = gserver.LoginService{}
-	srv.ContextService = gserver.ContextService{}
-	srv.DomainConfig = gserver.DomainConfig{}
+	srv.ContextService = context.ContextService{}
+	// srv.DomainConfig = gserver.DomainConfig{}
 	//	srv.Root.GetConfig = gserver.DomainConfig.GetConfig
 
 	// Middleware chains
 	// staticHandler := alice.New(gserver.LoginAdapter(srv), gserver.AccessAdapter("bla")).Then(gserver.StaticFileHandler(srv))
-	staticHandler := gserver.StaticFileHandler(srv)
-	staticUserHandler := alice.New(gserver.LoginAdapter(srv), gserver.AccessAdapter("bla")).Then(gserver.StaticUserFileHandler(srv))
+	staticHandler := gserver.StaticFileHandler(srv, false)
+	staticUserHandler := alice.New(gserver.LoginAdapter(srv), gserver.AccessAdapter("bla")).Then(gserver.StaticFileHandler(srv, true))
 	dynamicHandler := alice.New(gserver.LoginAdapter(srv), gserver.AccessAdapter("bla")).Then(gserver.FileHandler(srv))
 
 	// Router

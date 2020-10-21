@@ -1,11 +1,11 @@
-package gserver
+package context
 
 import (
 	"log"
-	"reflect"
 
 	"github.com/rveen/golib/document"
 	"github.com/rveen/golib/files"
+	"github.com/rveen/gserver"
 	"github.com/rveen/gserver/html"
 
 	"github.com/miekg/mmark"
@@ -18,14 +18,13 @@ type ContextService struct{}
 
 // Load the context for template processing
 //
-func (c ContextService) Load(context *ogdl.Graph, srv *Server) {
+func (c ContextService) Load(context *ogdl.Graph, srv *gserver.Server) {
 	context.Set("T", template)
 	context.Set("MD", xxmarkdown)
 	context.Set("MDX", xmarkdown)
 	context.Set("DOC", doc)
 	context.Set("files", &files.Files{})
 	context.Set("html", &html.Html{})
-	InitPlugins(context, srv)
 }
 
 func template(context *ogdl.Graph, template string) []byte {
@@ -66,44 +65,6 @@ func xxmarkdown(s string) []byte {
 	p := parser.NewWithExtensions(extensions)
 	println("----------------> xxmarkdown()")
 	return markdown.ToHTML([]byte(s), p, nil)
-}
-
-func InitPlugins(context *ogdl.Graph, srv *Server) {
-
-	for _, plugin := range srv.Plugins {
-
-		fn := context.Node(plugin).Interface()
-
-		// v := reflect.TypeOf(fn)
-		v := reflect.ValueOf(fn)
-
-		// m, isValid := v.MethodByName("Init")
-		m := v.MethodByName("Init")
-		if m.IsValid() {
-			// if isValid {
-			log.Println(" - Init method found")
-			cfg := srv.Config.Get(plugin)
-
-			if cfg != nil && cfg.Len() != 0 {
-
-				var vargs []reflect.Value
-				// vargs = append(vargs, reflect.ValueOf(fn))
-				vargs = append(vargs, reflect.ValueOf(cfg))
-				log.Printf(" - Init method to be called with: %s\n", cfg.Text())
-				// m.Func.Call(vargs)
-				m.Call(vargs)
-			}
-		}
-
-		m = v.MethodByName("Host")
-		if m.IsValid() {
-			var args []reflect.Value
-			args = m.Call(args)
-			log.Printf("context.go, calling Host: %v\n", args)
-		}
-
-		context.Set(plugin, fn)
-	}
 }
 
 type DomainConfig struct{}

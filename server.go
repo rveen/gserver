@@ -2,15 +2,12 @@ package gserver
 
 import (
 	"crypto/tls"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
-	"plugin"
-	"reflect"
+	"os"
 	"strings"
 	"time"
-	"unsafe"
 
 	"github.com/rveen/golib/fs"
 
@@ -39,6 +36,7 @@ type Server struct {
 	Host           string
 	SecureHost     string
 	Config         *ogdl.Graph
+	HostContexts   map[string]*ogdl.Graph
 	Context        *ogdl.Graph
 	Root           fs.FileSystem
 	DocRoot        string
@@ -93,48 +91,82 @@ func New() (*Server, error) {
 	// srv.Login = LoginService{}
 
 	// Default context builder
-	srv.ContextService = ContextService{}
-
-	// Load plugins
-
-	pluginDir := ".conf/plugin/"
-
-	pp, err := ioutil.ReadDir(pluginDir)
-	if err == nil {
-
-		for _, p := range pp {
-			if !strings.HasSuffix(p.Name(), ".so") {
-				continue
-			}
-			key := p.Name()[0 : len(p.Name())-3]
-			symbol := strings.Title(key)
-
-			pi, err := plugin.Open(pluginDir + p.Name())
-			if err == nil {
-				log.Println("plugin loaded:", p.Name())
-				// inspectPlugin(pi)
-
-				log.Println(" - Expected symbol", symbol)
-
-				fn, err := pi.Lookup(symbol)
-				if err == nil {
-					log.Println(" - Symbol found! Bind to", key)
-					srv.Context.Set(key, fn)
-					log.Println(" - Symbol kind", reflect.ValueOf(fn).Kind().String())
-					srv.Plugins = append(srv.Plugins, key)
-				}
-			} else {
-				log.Println(err)
-			}
-		}
-	}
+	srv.ContextService = nil
 
 	// Session manager
 	session.Global.Close()
 	srv.Sessions = session.NewCookieManagerOptions(session.NewInMemStore(), &session.CookieMngrOptions{AllowHTTP: true, CookieMaxAge: time.Hour * 24 * 90})
 
-	// File cache
-	// srv.Root = fs.New(srv.DocRoot)
+	return &srv, nil
+}
+
+// New prepares a Server{} structure initialized with
+// configuration information and a base context that will be
+// the initial context of each request.
+//
+func NewMulti() (*Server, error) {
+
+	srv := Server{}
+
+	// DocRoot has to end with a slash
+	srv.DocRoot = "./"
+
+	// UploadDir has to end with a slash
+	srv.UploadDir = "files/"
+
+	// Default host
+	srv.Host = ":8080"
+
+	// Server configuration file (optional)
+	srv.Config = ogdl.FromFile(".conf/config.ogdl")
+	if srv.Config == nil {
+		srv.Config = ogdl.New(nil)
+	}
+
+	// Base context for templates
+	// Each host gets its own
+	files, _ := ioutil.ReadDir(".")
+	srv.HostContexts = make(map[string]*ogdl.Graph)
+
+	for _, f := range files {
+		if f.Name() == ".conf" {
+			continue
+		}
+		fi, err := os.Stat(f.Name())
+		if err != nil {
+			continue
+		}
+
+		if !fi.IsDir() {
+			continue
+		}
+
+		srv.HostContexts[f.Name()] = ogdl.FromFile(f.Name() + "/.conf/context.ogdl")
+		log.Println("context loaded for host", f.Name())
+	}
+
+	// Register remote functions
+	rfs := srv.Config.Get("ogdlrf")
+	if rfs != nil {
+		for _, rf := range rfs.Out {
+			name := rf.ThisString()
+			host := rf.Get("host").String()
+			proto := rf.Get("protocol").Int64(2)
+			log.Println("remote function registered:", name, host, proto)
+			f := rpc.Client{Host: host, Timeout: 1, Protocol: int(proto)}
+			srv.Context.Set(name, f.Call)
+		}
+	}
+
+	// Default Auth
+	// srv.Login = LoginService{}
+
+	// Default context builder
+	srv.ContextService = nil
+
+	// Session manager
+	session.Global.Close()
+	srv.Sessions = session.NewCookieManagerOptions(session.NewInMemStore(), &session.CookieMngrOptions{AllowHTTP: true, CookieMaxAge: time.Hour * 24 * 90})
 
 	return &srv, nil
 }
@@ -200,21 +232,5 @@ func serveTLS(host string, srv *http.Server) {
 		log.Println(srv.ListenAndServeTLS(".certs/cert.pem", ".certs/key.pem"))
 	} else {
 		log.Println(srv.ListenAndServeTLS("", ""))
-	}
-}
-
-type Plug struct {
-	Path    string
-	_       chan struct{}
-	Symbols map[string]interface{}
-}
-
-func inspectPlugin(p *plugin.Plugin) {
-	pl := (*Plug)(unsafe.Pointer(p))
-
-	fmt.Printf("Plugin %s exported symbols (%d): \n", pl.Path, len(pl.Symbols))
-
-	for name, pointers := range pl.Symbols {
-		fmt.Printf("symbol: %s, pointer: %v, type: %v\n", name, pointers, reflect.TypeOf(pointers))
 	}
 }
