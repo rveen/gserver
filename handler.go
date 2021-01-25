@@ -131,7 +131,7 @@ func FileHandler(srv *Server, host bool) http.Handler {
 				context.Copy(srv.HostContexts[r.Host])
 			}
 			sess.SetAttr("context", context)
-			srv.ContextService.Load(context, srv)
+			srv.ContextService.SessionContext(context, srv)
 		} else {
 			context = i.(*ogdl.Graph)
 		}
@@ -317,7 +317,6 @@ func FileHandler(srv *Server, host bool) http.Handler {
 				http.Error(w, err.Error(), 500)
 			}
 		} else {
-			log.Println("Handler: writing to output", len(buf))
 			w.Write(buf)
 		}
 

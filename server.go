@@ -25,7 +25,8 @@ type login interface {
 }
 
 type contextService interface {
-	Load(*ogdl.Graph, *Server)
+	SessionContext(*ogdl.Graph, *Server)
+	GlobalContext(*Server)
 }
 
 type domainConfig interface {

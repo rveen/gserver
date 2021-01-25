@@ -94,9 +94,9 @@ func main() {
 
 	// Middleware chains
 	// staticHandler := alice.New(gserver.LoginAdapter(srv), gserver.AccessAdapter("bla")).Then(gserver.StaticFileHandler(srv))
-	staticHandler := gserver.StaticFileHandler(srv, false)
-	staticUserHandler := alice.New(gserver.LoginAdapter(srv), gserver.AccessAdapter("bla")).Then(gserver.StaticFileHandler(srv, true))
-	dynamicHandler := alice.New(gserver.LoginAdapter(srv), gserver.AccessAdapter("bla")).Then(gserver.FileHandler(srv))
+	staticHandler := gserver.StaticFileHandler(srv, hosts, false)
+	staticUserHandler := alice.New(gserver.LoginAdapter(srv), gserver.AccessAdapter("bla")).Then(gserver.StaticFileHandler(srv, hosts, true))
+	dynamicHandler := alice.New(gserver.LoginAdapter(srv), gserver.AccessAdapter("bla")).Then(gserver.FileHandler(srv, hosts))
 
 	// Router
 	// (see github.com/DATA-DOG/fastroute for all the possibilities of this router).

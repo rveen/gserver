@@ -16,15 +16,18 @@ import (
 
 type ContextService struct{}
 
-// Load the context for template processing
-//
-func (c ContextService) Load(context *ogdl.Graph, srv *gserver.Server) {
-	context.Set("T", template)
-	context.Set("MD", xxmarkdown)
-	context.Set("MDX", xmarkdown)
-	context.Set("DOC", doc)
-	context.Set("files", &files.Files{})
-	context.Set("html", &html.Html{})
+// SessionContext add things to the user's session context
+func (c ContextService) SessionContext(context *ogdl.Graph, srv *gserver.Server) {
+}
+
+// GlobalContext add things to the global context that is copied to all sessions
+func (c ContextService) GlobalContext(srv *gserver.Server) {
+	srv.Context.Set("T", template)
+	srv.Context.Set("MD", xxmarkdown)
+	srv.Context.Set("MDX", xmarkdown)
+	srv.Context.Set("DOC", doc)
+	srv.Context.Set("files", &files.Files{})
+	srv.Context.Set("html", &html.Html{})
 }
 
 func template(context *ogdl.Graph, template string) []byte {
