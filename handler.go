@@ -186,8 +186,6 @@ func FileHandler(srv *Server, host bool) http.Handler {
 		}
 		data.Set("urlbase", url)
 
-		file.Prepare()
-
 		for k, v := range file.Param {
 			data.Set(k, v)
 		}
@@ -196,7 +194,7 @@ func FileHandler(srv *Server, host bool) http.Handler {
 		context.Set("path.data", file.Data)
 		context.Set("path.content", "")
 
-		log.Println("FileHandler", path, file.Typ, file.Name)
+		log.Println("FileHandler", path, file.Typ, file.Name, len(file.Content))
 
 		buf := file.Content
 
