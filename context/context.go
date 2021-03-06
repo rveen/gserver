@@ -5,8 +5,8 @@ import (
 
 	"github.com/rveen/golib/document"
 	"github.com/rveen/golib/files"
+	"github.com/rveen/golib/html"
 	"github.com/rveen/gserver"
-	"github.com/rveen/gserver/html"
 
 	"github.com/miekg/mmark"
 	"github.com/rveen/markdown"
@@ -35,9 +35,9 @@ func template(context *ogdl.Graph, template string) []byte {
 	return t.Process(context)
 }
 
-func doc(context *ogdl.Graph, doc string) []byte {
-	d, _ := document.New(doc)
-	s := document.ToHtml(d)
+func doc(context *ogdl.Graph, text string) []byte {
+	doc, _ := document.New(text)
+	s := doc.Html()
 	return []byte(s)
 }
 
