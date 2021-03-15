@@ -23,8 +23,6 @@ func LoginAdapter(srv *Server) func(http.Handler) http.Handler {
 
 			sess := srv.Sessions.Get(r)
 
-			log.Println("session ?", sess != nil)
-
 			if r.FormValue("Logout") != "" {
 				// setCookie(w, "")
 				r.Form["user"] = []string{"nobody"}
@@ -41,16 +39,16 @@ func LoginAdapter(srv *Server) func(http.Handler) http.Handler {
 
 				// Is there a session ?
 				if sess == nil {
-					println("user reset to nobody:", r.FormValue("user"))
+					// println("user reset to nobody:", r.FormValue("user"))
 
 					if r.Form["user"] == nil {
 						r.Form["user"] = []string{"nobody"}
 					}
 				} else {
-					log.Println("user(b2)", sess.Attr("user").(string))
+					// log.Println("user(b2)", sess.Attr("user").(string))
 					r.Form["user"] = []string{sess.Attr("user").(string)}
 				}
-				log.Println("user(b)", r.Form["user"])
+				// log.Println("user(b)", r.Form["user"])
 				h.ServeHTTP(w, r)
 				return
 
@@ -163,8 +161,6 @@ func checkAccess(user, path string) bool {
 	if strings.HasPrefix(path, "/static/") {
 		return true
 	}
-
-	println("ACL: ", user, path)
 
 	if enforcer == nil {
 		enforcer, _ = acl.New(".conf/acl.conf")

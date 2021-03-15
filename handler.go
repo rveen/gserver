@@ -194,7 +194,7 @@ func FileHandler(srv *Server, host bool) http.Handler {
 		context.Set("path.data", file.Data)
 		context.Set("path.content", "")
 
-		log.Println("FileHandler", path, file.Typ, file.Name, len(file.Content))
+		// log.Println("FileHandler", path, file.Typ, file.Name, len(file.Content))
 
 		buf := file.Content
 
