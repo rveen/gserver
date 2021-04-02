@@ -1,6 +1,7 @@
 package gserver
 
 import (
+	"log"
 	"net/http"
 	"path/filepath"
 
@@ -18,6 +19,7 @@ func StaticFileHandler(srv *Server, host, userspace bool) http.Handler {
 
 		var path string
 
+		// Adjust the path
 		if userspace {
 			// These parameters come from the router: "/:user/file/*filepath"
 			user := fr.Parameters(r).ByName("user")
@@ -31,9 +33,12 @@ func StaticFileHandler(srv *Server, host, userspace bool) http.Handler {
 			path = r.Host + "/" + path
 		}
 
+		log.Println("StaticHandler", path)
+
 		// Get the file
 		file, err := srv.Root.Get(path, "")
 
+		// Process errors
 		if err != nil {
 			http.Error(w, err.Error(), 500)
 			return
@@ -42,23 +47,19 @@ func StaticFileHandler(srv *Server, host, userspace bool) http.Handler {
 			http.Error(w, http.StatusText(404), 404)
 			return
 		}
-
-		buf := file.Content
+		if len(file.Content) == 0 {
+			http.Error(w, "Zero length file", 500)
+			return
+		}
 
 		// Set Content-Type (MIME type)
-		// <!doctype html> makes the browser picky about mime types. This is stupid.
-		// TODO check that we get the correct Mime here!
-		if file.Typ != "" {
-			w.Header().Set("Content-Type", file.Typ)
+		if file.Type != "" {
+			w.Header().Set("Content-Type", file.Type)
 		}
 
+		// Write out
 		// Content-Length is set automatically in the Go http lib.
-
-		if len(buf) == 0 {
-			http.Error(w, "Zero length file", 500)
-		} else {
-			w.Write(buf)
-		}
+		w.Write(file.Content)
 	}
 
 	return http.HandlerFunc(fn)
