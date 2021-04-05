@@ -59,6 +59,8 @@ func StaticFileHandler(srv *Server, host, userspace bool) http.Handler {
 
 		// Write out
 		// Content-Length is set automatically in the Go http lib.
+
+		w.Header().Set("Cache-Control", "public, max-age=36000")
 		w.Write(file.Content)
 	}
 

@@ -26,21 +26,18 @@ func FileHandler(srv *Server, host bool) http.Handler {
 
 	fn := func(w http.ResponseWriter, r *http.Request) {
 
-		// Get the user from the form. This is set in loginHandler()
-		user := r.FormValue("_user")
+		// Get a session, whether or not the user has logged in
+		context, user := getSession(r, w, host, srv)
 
 		// Upload files if "UploadFiles" is present (a valid user is needed)
 		if r.FormValue("UploadFiles") != "" {
 			fileUpload(r, user)
 		}
 
-		// TODO is this needed?
-		r.URL.Path = filepath.Clean(r.URL.Path)
+		// TODO is this really needed?
+		// r.URL.Path = filepath.Clean(r.URL.Path)
 
 		log.Printf("Handler %s [user %s]\n", r.URL.Path, user)
-
-		// Get a session, whether or not the user has logged in
-		context := getSession(r, w, user, host, srv)
 
 		// Get the file
 		path := r.URL.Path
@@ -234,7 +231,7 @@ func fileUpload(r *http.Request, user string) error {
 	return nil
 }
 
-func getSession(r *http.Request, w http.ResponseWriter, user string, host bool, srv *Server) *ogdl.Graph {
+func getSession(r *http.Request, w http.ResponseWriter, host bool, srv *Server) (*ogdl.Graph, string) {
 
 	var context *ogdl.Graph
 
@@ -242,6 +239,7 @@ func getSession(r *http.Request, w http.ResponseWriter, user string, host bool, 
 
 	// Get the context from the session, or create a new one
 	if sess == nil {
+		log.Println("getSession: session is new")
 		sess = session.NewSession()
 		srv.Sessions.Add(sess, w)
 
@@ -253,10 +251,16 @@ func getSession(r *http.Request, w http.ResponseWriter, user string, host bool, 
 		}
 		sess.SetAttr("context", context)
 		srv.ContextService.SessionContext(context, srv)
-		context.Set("user", user)
+		context.Set("user", "nobody")
 
 	} else {
+		log.Println("getSession: session exists")
+
 		context = sess.Attr("context").(*ogdl.Graph)
+
+		if len(r.Form["_user"]) != 0 && r.Form["_user"][0] != "" {
+			context.Set("user", r.Form["_user"][0])
+		}
 	}
 
 	// Add request specific parameters
@@ -281,5 +285,5 @@ func getSession(r *http.Request, w http.ResponseWriter, user string, host bool, 
 		}
 	}
 
-	return context
+	return context, context.Get("user").String()
 }

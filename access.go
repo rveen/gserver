@@ -1,6 +1,7 @@
 package gserver
 
 import (
+	"log"
 	"net/http"
 	"strings"
 
@@ -9,15 +10,18 @@ import (
 	auth "github.com/abbot/go-http-auth"
 )
 
-// LoginAdapter sets the "_user" parameter of the request either to "nobody" or to
-// the authenticated user name.
+// LoginAdapter handles "Login" and "Logout"
+//
+// Login: sets r.Form["_user"] to the authenticated user name.
+// Logout: removes the session
+// Other: do nothing
+//
 func LoginAdapter(srv *Server) func(http.Handler) http.Handler {
 
 	mw := func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 			if r.FormValue("Logout") != "" {
-				r.Form["_user"] = []string{"nobody"}
 				sess := srv.Sessions.Get(r)
 				if sess != nil {
 					srv.Sessions.Remove(sess, w)
@@ -28,7 +32,7 @@ func LoginAdapter(srv *Server) func(http.Handler) http.Handler {
 				// TODO load the file at startup only and after changes.
 				// TODO Return an error if the file is not present, do not panic
 				secrets := auth.HtpasswdFileProvider(".conf/htpasswd")
-				println("htpasswd loaded")
+				log.Println("htpasswd loaded")
 
 				user := r.FormValue("User")
 
@@ -41,9 +45,9 @@ func LoginAdapter(srv *Server) func(http.Handler) http.Handler {
 						return
 					}
 				}
-				r.Form["user"] = []string{user}
+				r.Form["_user"] = []string{user}
 
-				println("user set in r.Form[]:", r.FormValue("user"))
+				log.Println("user set in r.Form[]:", user)
 
 				if rdir := r.FormValue("redirect"); rdir != "" {
 					if rdir == "_user" {
