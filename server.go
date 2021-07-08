@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/rveen/golib/fs"
+	"github.com/rveen/golib/fn"
 
 	fr "github.com/DATA-DOG/fastroute"
 	"github.com/icza/session"
@@ -39,7 +39,7 @@ type Server struct {
 	Config         *ogdl.Graph
 	HostContexts   map[string]*ogdl.Graph
 	Context        *ogdl.Graph
-	Root           fs.FileSystem
+	Root           *fn.FNode
 	DocRoot        string
 	UploadDir      string
 	Sessions       session.Manager
@@ -47,6 +47,7 @@ type Server struct {
 	Login          login
 	ContextService contextService
 	DomainConfig   domainConfig
+	Templates      map[string]*ogdl.Graph
 }
 
 // New prepares a Server{} structure initialized with
@@ -74,6 +75,15 @@ func New() (*Server, error) {
 
 	// Base context for templates (optional)
 	srv.Context = ogdl.FromFile(".conf/context.ogdl")
+
+	// Preload templates
+	tpls := srv.Config.Get("templates")
+	srv.Templates = make(map[string]*ogdl.Graph)
+	if tpls.Len() > 0 {
+		for _, tpl := range tpls.Out {
+			srv.Templates[tpl.ThisString()] = ogdl.NewTemplate(tpl.String())
+		}
+	}
 
 	// Register remote functions
 	rfs := srv.Config.Get("ogdlrf")

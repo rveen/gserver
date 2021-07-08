@@ -2,6 +2,7 @@ package gserver
 
 import (
 	"log"
+	"mime"
 	"net/http"
 	"path/filepath"
 
@@ -36,26 +37,25 @@ func StaticFileHandler(srv *Server, host, userspace bool) http.Handler {
 		log.Println("StaticHandler", path)
 
 		// Get the file
-		file, err := srv.Root.Get(path, "")
+		fd := *srv.Root
+		file := &fd
+		err := file.Get(path)
 
 		// Process errors
 		if err != nil {
 			http.Error(w, err.Error(), 500)
 			return
 		}
-		if file == nil {
-			http.Error(w, http.StatusText(404), 404)
-			return
-		}
+
 		if len(file.Content) == 0 {
 			http.Error(w, "Zero length file", 500)
 			return
 		}
 
 		// Set Content-Type (MIME type)
-		if file.Type != "" {
-			w.Header().Set("Content-Type", file.Type)
-		}
+		ext := filepath.Ext(file.Path)
+		mimeType := mime.TypeByExtension(ext)
+		w.Header().Set("Content-Type", mimeType)
 
 		// Write out
 		// Content-Length is set automatically in the Go http lib.

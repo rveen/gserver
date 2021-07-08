@@ -3,6 +3,7 @@ package gserver
 import (
 	"errors"
 	"log"
+	"mime"
 	"mime/multipart"
 	"net/http"
 	"os"
@@ -34,50 +35,66 @@ func FileHandler(srv *Server, host bool) http.Handler {
 			fileUpload(r, user)
 		}
 
-		// TODO is this really needed?
-		// r.URL.Path = filepath.Clean(r.URL.Path)
-
 		log.Printf("Handler %s [user %s]\n", r.URL.Path, user)
 
-		// Get the file
+		// Full path
 		path := r.URL.Path
 		if host {
 			path = r.Host + "/" + path
 		}
-		file, err := srv.Root.Get(path, "")
+
+		// process functions ('f')
+		switch r.FormValue("f") {
+		case "md_save":
+			// save markdown file ('content' to 'path'
+			content := []byte(r.FormValue("content"))
+			log.Printf("Handler saving 'content' to %s (%d bytes)\n", path, len(content))
+			p := srv.DocRoot + path
+			if !strings.HasSuffix(p, ".md") {
+				p += ".md"
+			}
+			err := os.WriteFile(p, content, 0666)
+			if err != nil {
+				log.Println(err)
+			}
+		}
+
+		// Get the file
+		fd := *srv.Root
+		file := &fd
+
+		var err error
+		raw := false
+		if r.FormValue("m") == "raw" {
+			raw = true
+			err = file.GetRaw(path)
+		} else {
+			err = file.Get(path)
+		}
 
 		if err != nil {
-			http.Error(w, err.Error(), 500)
-			return
-		}
-		if file == nil {
 			http.Error(w, http.StatusText(404), 404)
 			return
 		}
 
+		log.Println("handler: file: ", file.Path, file.Type)
+
 		// Set R.urlbase (for setting <base href="R.urlbase"> allowing relative URLs
 		base := r.URL.Path
-		if file.IsDir() {
-			if base == "" {
-				base = "/"
-			} else if base[len(base)-1] != '/' {
-				base += "/"
-			}
-		} else {
-			base = filepath.Dir(base)
+		if file.Type != "dir" {
+			base = filepath.Dir(file.Path[len(file.Base):])
+		}
+		if base[len(base)-1] != '/' {
+			base += "/"
 		}
 
 		data := context.Node("R")
 		data.Set("urlbase", base)
 
 		// Add parameters found in the file path (_token)
-		for k, v := range file.Param {
+		for k, v := range file.Params {
 			data.Set(k, v)
 		}
-
-		context.Set("path.meta", file.Info)
-		context.Set("path.data", file.Data)
-		context.Set("path.content", "")
 
 		// Process templates
 		//
@@ -85,77 +102,61 @@ func FileHandler(srv *Server, host bool) http.Handler {
 		// templates are taken from the main context, while the content (this
 		// path) is injected into the context so that the template can pick it up.
 
-		switch file.Type {
-		case "revs":
+		// Process 'dir', 'file', 'document', 'data' or 'log'
+		// If !raw:
+		// If file, process .htm and .txt as templates
+		// If dir, document or data, use corresponding template
+		// When there is a readme, type is 'dir' and fn.Content is not empty
 
-			name := filepath.Base(file.Name)
-			if name[len(name)-1] == '@' {
-				name = name[:len(name)-1]
-			}
-			context.Set("path.filename", name)
+		mimeType := ""
 
-			// Get the template used for revision lists
-			tplx := context.Get("template.revs").String()
-			if tplx != "" {
-				// TODO preprocess templates !!
-				file.Template = ogdl.NewTemplate(tplx)
-				file.Content = file.Template.Process(context)
-			} else {
-				err = errors.New("Template not fount for type " + file.Type)
-			}
+		if !raw {
+			switch file.Type {
 
-		case "t":
-			file.Content = file.Template.Process(context)
-		case "m":
-			// .md is considered a template. Here it is processed, before
-			// going into the generic template.
-			// TODO check this double templating thing
-			context.Set("path.content", string(file.Template.Process(context)))
+			case "document":
+				file.Content = []byte(file.Document.Html())
+				fallthrough
+			case "dir", "data", "log":
+				context.Set("path.content", string(file.Content))
+				context.Set("path.data", file.Data)
 
-			tplx := ""
-			if strings.HasPrefix(strings.ToLower(filepath.Base(file.Name)), "readme.") {
-				tplx = context.Get("template.mddir").String()
-			} else {
-				tplx = context.Get("template.md").String()
-			}
+				tp := r.FormValue("t")
+				if tp == "" {
+					if strings.HasSuffix(file.Path, "readme.md") {
+						tp = "readme"
+					} else {
+						tp = file.Type
+					}
+				}
 
-			if tplx != "" {
-				file.Template = ogdl.NewTemplate(tplx)
-				file.Content = file.Template.Process(context)
-			} else {
-				err = errors.New("Template not fount for type " + file.Type)
-			}
+				tpl := srv.Templates[tp]
+				file.Content = tpl.Process(context)
+				mimeType = "text/html"
 
-		case "dir", "data/ogdl", "data/json":
-
-			// does the tree contain a template spec?
-			name := file.Data.Get("template").String()
-
-			if name == "" {
-				if file.Type == "dir" {
-					name = "dir"
-				} else {
-					name = "data"
+			default: // 'file'. Check .text and .htm (templates)
+				if strings.HasSuffix(file.Path, ".htm") || strings.HasSuffix(file.Path, ".text") {
+					tpl := ogdl.NewTemplate(string(file.Content))
+					file.Content = tpl.Process(context)
 				}
 			}
-			tplx := context.Get("template." + name).String()
-			if tplx != "" {
-				file.Template = ogdl.NewTemplate(tplx)
-				file.Content = file.Template.Process(context)
-			} else {
-				err = errors.New("Template not fount for type " + file.Type)
+		} else {
+			// raw content with template
+			if r.FormValue("t") != "" {
+				tpl := srv.Templates[r.FormValue("t")]
+				file.Content = tpl.Process(context)
+				mimeType = "text/html"
 			}
 		}
 
 		// Set Content-Type (MIME type)
-		if len(file.Mime) > 0 {
-			w.Header().Set("Content-Type", file.Mime)
+		if mimeType == "" {
+			ext := filepath.Ext(file.Path)
+			mimeType = mime.TypeByExtension(ext)
 		}
+		w.Header().Set("Content-Type", mimeType)
 
 		// Content-Length is set automatically in the Go http lib.
-		if err != nil {
-			http.Error(w, err.Error(), 500)
-		} else if len(file.Content) == 0 {
+		if len(file.Content) == 0 {
 			http.Error(w, "Empty content", 500)
 		} else {
 			w.Write(file.Content)
@@ -267,7 +268,7 @@ func getSession(r *http.Request, w http.ResponseWriter, host bool, srv *Server) 
 
 	data := context.Create("R")
 	data.Set("url", r.URL.Path)
-	data.Set("home", srv.Root.Root())
+	data.Set("home", srv.Root.Base)
 
 	r.ParseForm()
 
