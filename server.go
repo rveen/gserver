@@ -1,12 +1,11 @@
 package gserver
 
 import (
-	"crypto/tls"
+	// "crypto/tls"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/rveen/golib/fn"
@@ -25,7 +24,6 @@ type login interface {
 }
 
 type contextService interface {
-	SessionContext(*ogdl.Graph, *Server)
 	GlobalContext(*Server)
 }
 
@@ -36,6 +34,7 @@ type domainConfig interface {
 type Server struct {
 	Host           string
 	SecureHost     string
+	Hosts          []string
 	Config         *ogdl.Graph
 	HostContexts   map[string]*ogdl.Graph
 	Context        *ogdl.Graph
@@ -48,15 +47,80 @@ type Server struct {
 	ContextService contextService
 	DomainConfig   domainConfig
 	Templates      map[string]*ogdl.Graph
+	Multi          bool
 }
 
 // New prepares a Server{} structure initialized with
 // configuration information and a base context that will be
 // the initial context of each request.
 //
-func New() (*Server, error) {
+func New(host string) (*Server, error) {
 
 	srv := Server{}
+
+	// DocRoot has to end with a slash
+	srv.DocRoot = "./"
+
+	// UploadDir has to end with a slash
+	srv.UploadDir = "files/"
+
+	// Default host
+	srv.Host = host
+
+	// Server configuration file (optional)
+	srv.Config = ogdl.FromFile(".conf/config.ogdl")
+	if srv.Config == nil {
+		srv.Config = ogdl.New(nil)
+	}
+
+	// Base context for templates (optional)
+	srv.Context = ogdl.FromFile(".conf/context.ogdl")
+
+	// Preload templates
+	tpls := srv.Config.Get("templates")
+	srv.Templates = make(map[string]*ogdl.Graph)
+	if tpls.Len() > 0 {
+		for _, tpl := range tpls.Out {
+			srv.Templates[tpl.ThisString()] = ogdl.NewTemplate(tpl.String())
+		}
+	}
+
+	// Register remote functions
+	rfs := srv.Config.Get("ogdlrf")
+	if rfs != nil {
+		for _, rf := range rfs.Out {
+			name := rf.ThisString()
+			host := rf.Get("host").String()
+			proto := rf.Get("protocol").Int64(2)
+			log.Println("remote function registered:", name, host, proto)
+			f := rpc.Client{Host: host, Timeout: 1, Protocol: int(proto)}
+			srv.Context.Set(name, f.Call)
+		}
+	}
+
+	srv.Hosts = append(srv.Hosts, srv.Host)
+
+	// Default Auth
+	// srv.Login = LoginService{}
+
+	// Default context builder
+	srv.ContextService = nil
+
+	// Session manager
+	session.Global.Close()
+	srv.Sessions = session.NewCookieManagerOptions(session.NewInMemStore(), &session.CookieMngrOptions{AllowHTTP: true, CookieMaxAge: time.Hour * 24 * 90})
+
+	return &srv, nil
+}
+
+// New prepares a Server{} structure initialized with
+// configuration information and a base context that will be
+// the initial context of each request.
+//
+func NewMulti() (*Server, error) {
+
+	srv := Server{}
+	srv.Multi = true
 
 	// DocRoot has to end with a slash
 	srv.DocRoot = "./"
@@ -73,8 +137,29 @@ func New() (*Server, error) {
 		srv.Config = ogdl.New(nil)
 	}
 
-	// Base context for templates (optional)
-	srv.Context = ogdl.FromFile(".conf/context.ogdl")
+	// Base context for templates
+	// Each host gets its own
+	files, _ := ioutil.ReadDir(".")
+	srv.HostContexts = make(map[string]*ogdl.Graph)
+
+	for _, f := range files {
+		if f.Name()[0] == '.' || f.Name()[0] == '_' {
+			continue
+		}
+		fi, err := os.Stat(f.Name())
+		if err != nil {
+			continue
+		}
+
+		if !fi.IsDir() {
+			continue
+		}
+
+		srv.HostContexts[f.Name()] = ogdl.FromFile(f.Name() + "/.conf/context.ogdl")
+		log.Println("context loaded for host", f.Name())
+
+		srv.Hosts = append(srv.Hosts, f.Name())
+	}
 
 	// Preload templates
 	tpls := srv.Config.Get("templates")
@@ -111,78 +196,7 @@ func New() (*Server, error) {
 	return &srv, nil
 }
 
-// New prepares a Server{} structure initialized with
-// configuration information and a base context that will be
-// the initial context of each request.
-//
-func NewMulti() (*Server, error) {
-
-	srv := Server{}
-
-	// DocRoot has to end with a slash
-	srv.DocRoot = "./"
-
-	// UploadDir has to end with a slash
-	srv.UploadDir = "files/"
-
-	// Default host
-	srv.Host = ":8080"
-
-	// Server configuration file (optional)
-	srv.Config = ogdl.FromFile(".conf/config.ogdl")
-	if srv.Config == nil {
-		srv.Config = ogdl.New(nil)
-	}
-
-	// Base context for templates
-	// Each host gets its own
-	files, _ := ioutil.ReadDir(".")
-	srv.HostContexts = make(map[string]*ogdl.Graph)
-
-	for _, f := range files {
-		if f.Name() == ".conf" {
-			continue
-		}
-		fi, err := os.Stat(f.Name())
-		if err != nil {
-			continue
-		}
-
-		if !fi.IsDir() {
-			continue
-		}
-
-		srv.HostContexts[f.Name()] = ogdl.FromFile(f.Name() + "/.conf/context.ogdl")
-		log.Println("context loaded for host", f.Name())
-	}
-
-	// Register remote functions
-	rfs := srv.Config.Get("ogdlrf")
-	if rfs != nil {
-		for _, rf := range rfs.Out {
-			name := rf.ThisString()
-			host := rf.Get("host").String()
-			proto := rf.Get("protocol").Int64(2)
-			log.Println("remote function registered:", name, host, proto)
-			f := rpc.Client{Host: host, Timeout: 1, Protocol: int(proto)}
-			srv.Context.Set(name, f.Call)
-		}
-	}
-
-	// Default Auth
-	// srv.Login = LoginService{}
-
-	// Default context builder
-	srv.ContextService = nil
-
-	// Session manager
-	session.Global.Close()
-	srv.Sessions = session.NewCookieManagerOptions(session.NewInMemStore(), &session.CookieMngrOptions{AllowHTTP: true, CookieMaxAge: time.Hour * 24 * 90})
-
-	return &srv, nil
-}
-
-func (srv *Server) Serve(host_port string, secure bool, timeout int, router fr.Router) {
+func (srv *Server) Serve(secure bool, timeout int, router fr.Router) {
 	// Serve either HTTP or HTTPS.
 	// In case of HTTPS, all requests to HTTP are redirected.
 	//
@@ -190,42 +204,40 @@ func (srv *Server) Serve(host_port string, secure bool, timeout int, router fr.R
 
 	if secure {
 
-		hostname := host_port
-		h := strings.Split(host_port, ":")
-		if len(h) == 2 {
-			hostname = h[0]
-		}
-
 		certManager := autocert.Manager{
 			Prompt:     autocert.AcceptTOS,
-			HostPolicy: autocert.HostWhitelist(hostname),
+			HostPolicy: autocert.HostWhitelist(srv.Hosts...),
 			Cache:      autocert.DirCache(".certs"), //folder for storing certificates
 		}
 
+		log.Println("Let's Encrypt domain white list:", srv.Hosts)
+
+		tlsConfig := certManager.TLSConfig()
 		shttp := &http.Server{
-			Addr:         host_port,
+			Addr:         ":443",
 			Handler:      router,
 			ReadTimeout:  time.Second * time.Duration(timeout),
 			WriteTimeout: time.Second * time.Duration(timeout),
-			TLSConfig: &tls.Config{
-				GetCertificate: certManager.GetCertificate,
-			},
+			TLSConfig:    tlsConfig, /* &tls.Config{	GetCertificate: certManager.GetCertificate,	},*/
 		}
-		go serveTLS(hostname, shttp)
+
+		// TODO detect localhost and serve self-signed certificates
+		go serveTLS(":443", shttp)
 
 		s := &http.Server{
-			Addr:         hostname + ":80",
+			Addr:         ":80",
 			Handler:      certManager.HTTPHandler(nil), //http.HandlerFunc(redirect),
 			ReadTimeout:  time.Second * time.Duration(timeout),
 			WriteTimeout: time.Second * time.Duration(timeout),
 		}
-		log.Println("starting SSL (with redirect from non-SSL). Hostname is", hostname)
+		log.Println("starting SSL (with redirect from non-SSL).")
 		s.ListenAndServe()
 	} else {
-		log.Println(http.ListenAndServe(host_port, router))
+		log.Println(http.ListenAndServe(":80", router))
 	}
 }
 
+/*
 func redirect(w http.ResponseWriter, r *http.Request) {
 
 	target := "https://" + r.Host + r.URL.Path
@@ -237,7 +249,7 @@ func redirect(w http.ResponseWriter, r *http.Request) {
 		// see @andreiavrammsd comment: often 307 > 301
 		http.StatusPermanentRedirect)
 }
-
+*/
 func serveTLS(host string, srv *http.Server) {
 	if host == "localhost" || host == "" {
 		log.Println(srv.ListenAndServeTLS(".certs/cert.pem", ".certs/key.pem"))
