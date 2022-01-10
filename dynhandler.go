@@ -19,6 +19,16 @@ func DynamicHandler(srv *Server, host bool) http.Handler {
 		// Adapt the request to gserver.Request format.
 		r := ConvertRequest(rh, w, host, srv)
 
+		// Upload files if "UploadFiles" is present
+		if rh.FormValue("UploadFiles") != "" {
+			ff, _ := fileUpload(rh, "")
+			data := r.Context.Node("R")
+			files := data.Add("file")
+			for _, f := range ff {
+				files.Add(f)
+			}
+		}
+
 		// Get the file (or dir) corresponding to the path
 		err := r.Get()
 

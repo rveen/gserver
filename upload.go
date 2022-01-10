@@ -1,16 +1,16 @@
 package gserver
 
 import (
-	"errors"
+	"crypto/md5"
+	"encoding/hex"
 	"log"
 	"mime/multipart"
 	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
-func fileUpload(r *http.Request, user string) error {
+func fileUpload(r *http.Request, user string) ([]string, error) {
 
 	/*
 		if user == "nobody" || len(user) == 0 {
@@ -22,26 +22,19 @@ func fileUpload(r *http.Request, user string) error {
 	// initialized. If it isn't a multipart this gives an error.
 	err := r.ParseMultipartForm(10000000) // 10M
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	// Where to store the file
-	folder := r.FormValue("folder")
-	folder = filepath.Clean(folder)
-	log.Println("upload to folder", folder)
-
-	if len(folder) > 64 || strings.Contains(folder, "..") {
-		return errors.New("incorrect folder name " + folder)
-	}
-	folder = filepath.Clean("_user/file/" + user + "/" + folder + "/")
-
+	folder := filepath.Clean("_tmp")
 	os.MkdirAll(folder, 644)
+
 	buf := make([]byte, 1000000)
-	log.Println("folder for uploading:", folder)
 
 	var file multipart.File
 	var wfile *os.File
 	var n int
+
+	var ff []string
 
 	for k := range r.MultipartForm.File {
 
@@ -51,7 +44,7 @@ func fileUpload(r *http.Request, user string) error {
 
 			file, err = v.Open()
 			if err != nil {
-				return err
+				return nil, err
 			}
 			defer file.Close()
 
@@ -59,21 +52,32 @@ func fileUpload(r *http.Request, user string) error {
 
 			wfile, err = os.Create(folder + "/" + v.Filename)
 			if err != nil {
-				return err
+				return nil, err
 			}
 			defer wfile.Close()
 
+			h := md5.New()
 			for {
 				n, err = file.Read(buf)
 				if n > 0 {
 					wfile.Write(buf[:n])
+					h.Write(buf[:n])
 				}
-				if err != nil || n <= len(buf) {
+				if err != nil {
 					break
 				}
 			}
+
+			fname := "file/hash/" + hex.EncodeToString(h.Sum(nil)) + filepath.Ext(v.Filename)
+
+			log.Println("uploading file with MD5", hex.EncodeToString(h.Sum(nil)))
+			log.Println("moving to", fname)
+			os.Rename(folder+"/"+v.Filename, fname)
+
+			ff = append(ff, fname)
+
 		}
 	}
 
-	return nil
+	return ff, nil
 }

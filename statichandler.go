@@ -36,6 +36,11 @@ func StaticFileHandler(srv *Server, host, userspace bool) http.Handler {
 
 		log.Println("StaticHandler", path)
 
+		// Upload files if "UploadFiles" is present
+		if r.FormValue("UploadFiles") != "" {
+			fileUpload(r, "")
+		}
+
 		// Get the file
 		fd := *srv.Root
 		file := &fd
