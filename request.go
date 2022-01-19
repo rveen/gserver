@@ -78,18 +78,42 @@ func getSession(r *http.Request, w http.ResponseWriter, host bool, srv *Server) 
 	r.ParseForm()
 
 	// Add GET, POST, PUT parameters into context
-	for k := range r.Form {
-		for _, v := range r.Form[k] {
-			// Check for _ogdl
+	for k, vv := range r.Form {
+
+		n := data.Get(k)
+
+		for _, v := range vv {
 			if strings.HasSuffix(k, "._ogdl") {
 				k = k[0 : len(k)-6]
 				g := ogdl.FromString(v)
-				data.Set(k, g)
+				if n == nil {
+					data.Set(k, g)
+				} else {
+					n.Add(g)
+				}
 			} else {
-				data.Set(k, v)
+				if n == nil {
+					data.Set(k, v)
+				} else {
+					n.Add(v)
+				}
 			}
 		}
 	}
+
+	/*
+		for k := range r.Form {
+			for _, v := range r.Form[k] {
+				// Check for _ogdl
+				if strings.HasSuffix(k, "._ogdl") {
+					k = k[0 : len(k)-6]
+					g := ogdl.FromString(v)
+					data.Set(k, g)
+				} else {
+					data.Set(k, v)
+				}
+			}
+		}*/
 
 	return context
 }
