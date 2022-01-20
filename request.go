@@ -80,7 +80,7 @@ func getSession(r *http.Request, w http.ResponseWriter, host bool, srv *Server) 
 	// Add GET, POST, PUT parameters into context
 	for k, vv := range r.Form {
 
-		n := data.Get(k)
+		var n *ogdl.Graph
 
 		for _, v := range vv {
 			if strings.HasSuffix(k, "._ogdl") {
@@ -88,12 +88,14 @@ func getSession(r *http.Request, w http.ResponseWriter, host bool, srv *Server) 
 				g := ogdl.FromString(v)
 				if n == nil {
 					data.Set(k, g)
+					n = data.Get(k)
 				} else {
 					n.Add(g)
 				}
 			} else {
 				if n == nil {
 					data.Set(k, v)
+					n = data.Get(k)
 				} else {
 					n.Add(v)
 				}
