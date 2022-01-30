@@ -233,7 +233,11 @@ func (srv *Server) Serve(secure bool, timeout int, router fr.Router) {
 		log.Println("starting SSL (with redirect from non-SSL).")
 		s.ListenAndServe()
 	} else {
-		log.Println(http.ListenAndServe(":80", router))
+		if srv.Host != "" {
+			log.Println(http.ListenAndServe(srv.Host, router))
+		} else {
+			log.Println(http.ListenAndServe(":80", router))
+		}
 	}
 }
 

@@ -38,7 +38,7 @@ func ConvertRequest(r *http.Request, w http.ResponseWriter, host bool, srv *Serv
 	}
 
 	// load a pointer to a copy: do not touch srv.Root.
-	// Achtung!!: this does not work: rq.File = &(*srv.Root)
+	// Achtung!!: this doesn't work: rq.File = &(*srv.Root)
 	f := *srv.Root
 	rq.File = &f
 
@@ -53,7 +53,9 @@ func getSession(r *http.Request, w http.ResponseWriter, host bool, srv *Server) 
 
 	// Get the context from the session, or create a new one
 	if sess == nil {
-		sess = session.NewSession()
+
+		sess := session.NewSessionOptions(&session.SessOptions{Timeout: 10})
+		// sess = session.NewSession()
 		srv.Sessions.Add(sess, w)
 
 		context = ogdl.New(nil)
@@ -103,20 +105,6 @@ func getSession(r *http.Request, w http.ResponseWriter, host bool, srv *Server) 
 		}
 	}
 
-	/*
-		for k := range r.Form {
-			for _, v := range r.Form[k] {
-				// Check for _ogdl
-				if strings.HasSuffix(k, "._ogdl") {
-					k = k[0 : len(k)-6]
-					g := ogdl.FromString(v)
-					data.Set(k, g)
-				} else {
-					data.Set(k, v)
-				}
-			}
-		}*/
-
 	return context
 }
 
@@ -155,7 +143,7 @@ func (r *Request) Get() error {
 	return nil
 }
 
-// Process processes templates, remaining path fragments and sets mime type
+// Process processes templates, remaining path fragments and sets mime the type
 //
 func (r *Request) Process(srv *Server) error {
 	// Process templates

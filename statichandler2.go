@@ -5,6 +5,8 @@ import (
 	"mime"
 	"net/http"
 	"path/filepath"
+
+	"github.com/rveen/golib/fn"
 )
 
 // StaticFileHandler returns a handler that processes static files.
@@ -12,7 +14,7 @@ import (
 // if host is true, the hostname is prepended to the path
 // if userspace is true, the first element of a path is taken as a user
 //
-func StaticFileHandler(srv *Server, host, userspace bool) http.Handler {
+func StaticFileHandler2(srv *Server, host, userspace bool, fs *fn.FNode) http.Handler {
 
 	fn := func(w http.ResponseWriter, r *http.Request) {
 
@@ -23,10 +25,10 @@ func StaticFileHandler(srv *Server, host, userspace bool) http.Handler {
 			path = r.Host + "/" + path
 		}
 
-		log.Println("StaticHandler", path)
+		log.Println("StaticHandler2", path)
 
-		// Get the file. We make a copy of the struct!
-		fd := *srv.Root
+		// Get the file. Make a copy of the struct!
+		fd := *fs
 		file := &fd
 		err := file.Get(path)
 
@@ -49,7 +51,7 @@ func StaticFileHandler(srv *Server, host, userspace bool) http.Handler {
 		// Write out
 		// Content-Length is set automatically in the Go http lib.
 
-		w.Header().Set("Cache-Control", "public, max-age=7200")
+		w.Header().Set("Cache-Control", "public, max-age=36000")
 		w.Write(file.Content)
 	}
 

@@ -4,6 +4,8 @@ import (
 	"net/http"
 	"path/filepath"
 	"strings"
+
+	"github.com/rveen/golib/fn"
 )
 
 // DynamicHandler ...
@@ -11,7 +13,7 @@ import (
 // NOTE See https://github.com/bpowers/seshcookie
 // TODO serve files with http.ServeContent (handles large files with Range requests)
 //
-func DynamicHandler(srv *Server, host bool) http.Handler {
+func DynamicHandler2(srv *Server, host bool, fs *fn.FNode) http.Handler {
 
 	fn := func(w http.ResponseWriter, rh *http.Request) {
 
@@ -27,6 +29,8 @@ func DynamicHandler(srv *Server, host bool) http.Handler {
 		}
 
 		// Get the file (or dir) corresponding to the path
+		fd := *fs
+		r.File = &fd
 		err := r.Get()
 
 		if err != nil {

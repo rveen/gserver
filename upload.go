@@ -8,15 +8,21 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+
+	"github.com/rveen/ogdl"
 )
 
-func fileUpload(r *http.Request, user string) ([]string, error) {
+const (
+	FileDir = "file/hash"
+	TmpDir  = "file/.tmp"
+)
 
-	/*
-		if user == "nobody" || len(user) == 0 {
-			return errors.New("user not logged in")
-		}
-	*/
+func init() {
+	os.MkdirAll(FileDir, 0644)
+	os.MkdirAll(TmpDir, 0644)
+}
+
+func fileUpload(r *http.Request, user string) (*ogdl.Graph, error) {
 
 	// Handle file uploads. We call ParseMultipartForm here so that r.Form[] is
 	// initialized. If it isn't a multipart this gives an error.
@@ -25,8 +31,7 @@ func fileUpload(r *http.Request, user string) ([]string, error) {
 		return nil, err
 	}
 
-	folder := filepath.Clean("_tmp")
-	os.MkdirAll(folder, 644)
+	folder := TmpDir
 
 	buf := make([]byte, 1000000)
 
@@ -34,7 +39,7 @@ func fileUpload(r *http.Request, user string) ([]string, error) {
 	var wfile *os.File
 	var n int
 
-	var ff []string
+	g := ogdl.New(nil)
 
 	for k := range r.MultipartForm.File {
 
@@ -47,6 +52,12 @@ func fileUpload(r *http.Request, user string) ([]string, error) {
 				return nil, err
 			}
 			defer file.Close()
+
+			ext := filepath.Ext(v.Filename)
+			if ext == "" {
+				// Cannot handle files without extension
+				continue
+			}
 
 			log.Println("uploading:", folder+"/"+v.Filename)
 
@@ -68,16 +79,18 @@ func fileUpload(r *http.Request, user string) ([]string, error) {
 				}
 			}
 
-			fname := "file/hash/" + hex.EncodeToString(h.Sum(nil)) + filepath.Ext(v.Filename)
+			fname := FileDir + "/" + hex.EncodeToString(h.Sum(nil)) + ext
 
 			log.Println("uploading file with MD5", hex.EncodeToString(h.Sum(nil)))
 			log.Println("moving to", fname)
 			os.Rename(folder+"/"+v.Filename, fname)
 
-			ff = append(ff, fname)
+			f := g.Add("-")
+			f.Add("path").Add(fname)
+			f.Add("name").Add(v.Filename[:len(v.Filename)-len(ext)])
 
 		}
 	}
 
-	return ff, nil
+	return g, nil
 }

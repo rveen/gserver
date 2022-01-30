@@ -1,5 +1,7 @@
 package gserver
 
+// Deprecated!!
+
 import (
 	"log"
 	"mime"
