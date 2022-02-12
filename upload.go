@@ -13,8 +13,8 @@ import (
 )
 
 const (
-	FileDir = "file/hash"
-	TmpDir  = "file/.tmp"
+	FileDir = "file"
+	TmpDir  = ".tmp"
 )
 
 func init() {
@@ -88,6 +88,7 @@ func fileUpload(r *http.Request, user string) (*ogdl.Graph, error) {
 			f := g.Add("-")
 			f.Add("path").Add(fname)
 			f.Add("name").Add(v.Filename[:len(v.Filename)-len(ext)])
+			f.Add("fullname").Add(v.Filename)
 
 		}
 	}
