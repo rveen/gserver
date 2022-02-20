@@ -20,7 +20,7 @@ import (
 // NOTE See https://github.com/bpowers/seshcookie
 // TODO serve files with http.ServeContent (handles large files with Range requests)
 //
-func FileHandler(srv *Server, host bool) http.Handler {
+func FileHandler_(srv *Server, host bool) http.Handler {
 
 	fn := func(w http.ResponseWriter, r *http.Request) {
 

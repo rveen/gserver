@@ -19,6 +19,10 @@ func DynamicHandler2(srv *Server, host bool, fs *fn.FNode) http.Handler {
 
 		// Adapt the request to gserver.Request format.
 		r := ConvertRequest(rh, w, host, srv)
+		if r == nil {
+			http.Error(w, "Number of open sessions exceeded", 429)
+			return
+		}
 
 		// Upload files if "UploadFiles" is present
 		if rh.FormValue("UploadFiles") != "" {

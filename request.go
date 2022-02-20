@@ -6,10 +6,11 @@ import (
 	"net/http"
 	"path/filepath"
 	"strings"
+	"time"
 
-	"github.com/icza/session"
 	"github.com/rveen/golib/fn"
 	"github.com/rveen/ogdl"
+	"github.com/rveen/session"
 )
 
 type Request struct {
@@ -54,7 +55,11 @@ func getSession(r *http.Request, w http.ResponseWriter, host bool, srv *Server) 
 	// Get the context from the session, or create a new one
 	if sess == nil {
 
-		sess := session.NewSessionOptions(&session.SessOptions{Timeout: 10})
+		if srv.Sessions.Len() > 10000 {
+			return nil
+		}
+
+		sess := session.NewSessionOptions(&session.SessOptions{Timeout: 30 * time.Second})
 		// sess = session.NewSession()
 		srv.Sessions.Add(sess, w)
 
