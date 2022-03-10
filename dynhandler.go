@@ -11,9 +11,9 @@ import (
 // NOTE See https://github.com/bpowers/seshcookie
 // TODO serve files with http.ServeContent (handles large files with Range requests)
 //
-func DynamicHandler(srv *Server, host bool) http.Handler {
+func (srv *Server) DynamicHandler(host bool) http.HandlerFunc {
 
-	fn := func(w http.ResponseWriter, rh *http.Request) {
+	return func(w http.ResponseWriter, rh *http.Request) {
 
 		// Adapt the request to gserver.Request format.
 		r := ConvertRequest(rh, w, host, srv)
@@ -60,6 +60,4 @@ func DynamicHandler(srv *Server, host bool) http.Handler {
 			w.Write(r.File.Content)
 		}
 	}
-
-	return http.HandlerFunc(fn)
 }

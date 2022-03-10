@@ -14,9 +14,9 @@ import (
 // if host is true, the hostname is prepended to the path
 // if userspace is true, the first element of a path is taken as a user
 //
-func StaticFileHandler2(srv *Server, host, userspace bool, fs *fn.FNode) http.Handler {
+func (srv *Server) StaticFileHandler2(host, userspace bool, fs *fn.FNode) http.HandlerFunc {
 
-	fn := func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
 
 		// Needed?
 		path := filepath.Clean(r.URL.Path)
@@ -54,7 +54,4 @@ func StaticFileHandler2(srv *Server, host, userspace bool, fs *fn.FNode) http.Ha
 		w.Header().Set("Cache-Control", "public, max-age=36000")
 		w.Write(file.Content)
 	}
-
-	return http.HandlerFunc(fn)
-
 }

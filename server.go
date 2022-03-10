@@ -10,6 +10,8 @@ import (
 
 	"github.com/rveen/golib/fn"
 
+	"crypto/tls"
+
 	fr "github.com/DATA-DOG/fastroute"
 	"github.com/rveen/ogdl"
 	rpc "github.com/rveen/ogdl/ogdlrf"
@@ -129,7 +131,7 @@ func NewMulti() (*Server, error) {
 	srv.UploadDir = "files/"
 
 	// Default host
-	srv.Host = ":8080"
+	srv.Host = ":80"
 
 	// Server configuration file (optional)
 	srv.Config = ogdl.FromFile(".conf/config.ogdl")
@@ -213,12 +215,17 @@ func (srv *Server) Serve(secure bool, timeout int, router fr.Router) {
 		log.Println("Let's Encrypt domain white list:", srv.Hosts)
 
 		tlsConfig := certManager.TLSConfig()
+		tlsConfig.MinVersion = tls.VersionTLS12
+		tlsConfig.PreferServerCipherSuites = true
+		tlsConfig.CurvePreferences = []tls.CurveID{tls.CurveP256, tls.X25519}
+
 		shttp := &http.Server{
 			Addr:         ":443",
 			Handler:      router,
 			ReadTimeout:  time.Second * time.Duration(timeout),
 			WriteTimeout: time.Second * time.Duration(timeout),
-			TLSConfig:    tlsConfig, /* &tls.Config{	GetCertificate: certManager.GetCertificate,	},*/
+			// IdleTimeout:  N * time.Second
+			TLSConfig: tlsConfig, /* &tls.Config{	GetCertificate: certManager.GetCertificate,	},*/
 		}
 
 		// TODO detect localhost and serve self-signed certificates
@@ -234,9 +241,12 @@ func (srv *Server) Serve(secure bool, timeout int, router fr.Router) {
 		s.ListenAndServe()
 	} else {
 		if srv.Host != "" {
-			log.Println(http.ListenAndServe(srv.Host, router))
+			log.Println("starting non-SSL, host:", srv.Host)
+			http.ListenAndServe(srv.Host, router)
+
 		} else {
-			log.Println(http.ListenAndServe(":80", router))
+			log.Println("starting non-SSL, host:", ":80")
+			http.ListenAndServe(":80", router)
 		}
 	}
 }

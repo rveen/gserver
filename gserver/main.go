@@ -1,19 +1,17 @@
-// Copyright 2017-2019, Rolf Veen and contributors.
+// Copyright 2017-2022, Rolf Veen.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// TODO See https://medium.com/@matryer/how-i-write-go-http-services-after-seven-years-37c208122831
+// TODO See https://pace.dev/blog/2018/05/09/how-I-write-http-services-after-eight-years.html
 
 // Gserver is a web server.
 //
 // Summary of features
 //
-// Gserver is a web server with the following features:
-//
 //  - Any path of the form /[user]/file/* is served as static (StaticHandler) and
 //    converted to /files/user/*
 //  - Any other path is handled by Handler as follows.
-//  - Path elements of the form _n (n = number) are taken as revision numbers
+//  - Path elements of the form @rev are taken as revisions.
 //  - Path elements of the form _t (t != number) are taken as variables
 //  - Extensions of files are optional (if the file name is unique)
 //  - index.* (if found) is returned for paths that point to directories.
@@ -45,11 +43,10 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	_ "net/http/pprof"
+	"net/http/pprof"
 	"runtime"
-	"time"
 
-	"github.com/rveen/golib/fs"
+	"github.com/rveen/golib/fn"
 	"github.com/rveen/gserver"
 	"github.com/rveen/gserver/context"
 
@@ -81,7 +78,14 @@ func main() {
 		secure = true
 	}
 
-	srv, err := gserver.New()
+	var srv *gserver.Server
+	var err error
+
+	if !hosts {
+		srv, err = gserver.New(host)
+	} else {
+		srv, err = gserver.NewMulti()
+	}
 	if err != nil {
 		log.Println(err.Error())
 		return
@@ -89,20 +93,19 @@ func main() {
 
 	// srv.Login = gserver.LoginService{}
 	srv.ContextService = context.ContextService{}
-	// srv.DomainConfig = gserver.DomainConfig{}
-	//	srv.Root.GetConfig = gserver.DomainConfig.GetConfig
 
 	// Middleware chains
-	// staticHandler := alice.New(gserver.LoginAdapter(srv), gserver.AccessAdapter("bla")).Then(gserver.StaticFileHandler(srv))
-	staticHandler := gserver.StaticFileHandler(srv, hosts, false)
-	staticUserHandler := alice.New(gserver.LoginAdapter(srv), gserver.AccessAdapter("bla")).Then(gserver.StaticFileHandler(srv, hosts, true))
-	dynamicHandler := alice.New(gserver.LoginAdapter(srv), gserver.AccessAdapter("bla")).Then(gserver.FileHandler(srv, hosts))
-
-	// Router
-	// (see github.com/DATA-DOG/fastroute for all the possibilities of this router).
+	staticHandler := srv.StaticFileHandler(hosts, false)
+	dynamicHandler := alice.New(srv.LoginAdapter(), gserver.AccessAdapter("bla")).Then(srv.DynamicHandler(hosts))
 
 	router := fr.RouterFunc(func(req *http.Request) http.Handler {
-		return fr.Chain(fr.New("/static/*filepath", staticHandler), fr.New("/:user/file/*filepath", staticUserHandler), fr.New("/*filepath", dynamicHandler))
+		return fr.Chain(fr.New("/favicon.ico", staticHandler),
+
+			fr.New("/debug/pprof/*filepath", http.HandlerFunc(pprof.Index)),
+
+			fr.New("/static/*filepath" /*staticEmbedded*/, staticHandler),
+			fr.New("/file/*filepath", staticHandler),
+			fr.New("/*filepath", dynamicHandler))
 	})
 
 	log.Println("gserver starting, ", runtime.NumCPU(), "procs")
@@ -112,23 +115,8 @@ func main() {
 		log.SetOutput(ioutil.Discard)
 	}
 
-	if verbose {
-		go printStatus(srv)
-	}
-
 	// Overwrite the original file handler with this one
-	srv.Root = fs.New(srv.DocRoot)
+	srv.Root = fn.New(srv.DocRoot)
 
-	srv.Serve(host, secure, timeout, router)
-}
-
-func printStatus(srv *gserver.Server) {
-
-	for {
-		m := &runtime.MemStats{}
-		runtime.ReadMemStats(m)
-		log.Println("Mem (use/reserved)", m.HeapInuse, "/", m.Alloc)
-
-		time.Sleep(5 * time.Second)
-	}
+	srv.Serve(secure, timeout, router)
 }
