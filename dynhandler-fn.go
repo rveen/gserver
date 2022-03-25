@@ -1,6 +1,7 @@
 package gserver
 
 import (
+	"log"
 	"net/http"
 	"path/filepath"
 	"strings"
@@ -31,6 +32,8 @@ func (srv *Server) DynamicHandlerFn(host bool, fs *fn.FNode) http.HandlerFunc {
 			files := data.Add("files")
 			files.Add(gf)
 		}
+
+		log.Println("DynHandlerFn", r.Path)
 
 		// Get the file (or dir) corresponding to the path
 		fd := *fs
