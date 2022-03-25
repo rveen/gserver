@@ -12,9 +12,8 @@ import (
 // StaticFileHandler returns a handler that processes static files.
 //
 // if host is true, the hostname is prepended to the path
-// if userspace is true, the first element of a path is taken as a user
 //
-func (srv *Server) StaticFileHandler2(host, userspace bool, fs *fn.FNode) http.HandlerFunc {
+func (srv *Server) StaticFileHandlerFn(host bool, fs *fn.FNode) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 
