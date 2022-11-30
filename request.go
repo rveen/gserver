@@ -80,7 +80,7 @@ func getSession(r *http.Request, w http.ResponseWriter, host bool, srv *Server) 
 
 	data := context.Create("R")
 	data.Set("url", r.URL.Path)
-	data.Set("home", srv.Root.Base)
+	data.Set("home", srv.Root.Root)
 
 	r.ParseForm()
 
@@ -132,7 +132,7 @@ func (r *Request) Get() error {
 	// Set R.urlbase (for setting <base href="$R.urlbase"> allowing relative URLs)
 	base := r.HttpRequest.URL.Path
 	if r.File.Type != "dir" {
-		base = filepath.Dir(r.File.Path[len(r.File.Base):])
+		base = filepath.Dir(r.File.Path[len(r.File.Root):])
 	}
 	if base[len(base)-1] != '/' {
 		base += "/"

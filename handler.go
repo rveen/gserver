@@ -80,7 +80,7 @@ func FileHandler_(srv *Server, host bool) http.Handler {
 		// Set R.urlbase (for setting <base href="$R.urlbase"> allowing relative URLs)
 		base := r.URL.Path
 		if file.Type != "dir" {
-			base = filepath.Dir(file.Path[len(file.Base):])
+			base = filepath.Dir(file.Path[len(file.Root):])
 		}
 		if base[len(base)-1] != '/' {
 			base += "/"

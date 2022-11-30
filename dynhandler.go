@@ -15,6 +15,10 @@ func (srv *Server) DynamicHandler(host bool) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, rh *http.Request) {
 
+		if rh.FormValue("UploadFiles") != "" {
+
+		}
+
 		// Adapt the request to gserver.Request format.
 		r := ConvertRequest(rh, w, host, srv)
 		if r == nil {
