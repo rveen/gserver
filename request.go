@@ -188,7 +188,7 @@ func (r *Request) Process(srv *Server) error {
 
 			tpl := srv.Templates[tp]
 			if tpl == nil {
-				log.Println("no template for this type")
+				log.Println("no template for type", tp)
 			}
 			r.File.Content = tpl.Process(r.Context)
 			r.Mime = "text/html"
