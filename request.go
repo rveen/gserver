@@ -114,6 +114,7 @@ func getSession(r *http.Request, w http.ResponseWriter, host bool, srv *Server) 
 }
 
 // Get is a direct map from URL to file (binary content + params)
+// TODO: Clean r.Path vs r.File.Path dicotomy
 func (r *Request) Get() error {
 	// Get the file
 
@@ -129,9 +130,11 @@ func (r *Request) Get() error {
 		return err
 	}
 
+	// log.Printf("request.Get: [%s] [%s] [%s] [type=%s]\n", r.File.Root, r.File.Path, r.Path, r.File.Type)
+
 	// Set R.urlbase (for setting <base href="$R.urlbase"> allowing relative URLs)
 	base := r.HttpRequest.URL.Path
-	if r.File.Type != "dir" {
+	if r.File.Type != "dir" && strings.HasPrefix(r.File.Path, r.File.Root) {
 		base = filepath.Dir(r.File.Path[len(r.File.Root):])
 	}
 	if base[len(base)-1] != '/' {
