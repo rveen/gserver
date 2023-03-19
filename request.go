@@ -24,6 +24,8 @@ type Request struct {
 	// Session
 }
 
+var TplExtensions []string = []string{".htm", ".txt", ".csv", ".json", ".g", ".ogdl", ".xml"}
+
 func ConvertRequest(r *http.Request, w http.ResponseWriter, host bool, srv *Server) *Request {
 
 	rq := &Request{HttpRequest: r}
@@ -197,7 +199,7 @@ func (r *Request) Process(srv *Server) error {
 			r.Mime = "text/html"
 
 		default: // 'file'. Check .text and .htm (templates)
-			if strings.HasSuffix(r.File.Path, ".htm") || strings.HasSuffix(r.File.Path, ".text") {
+			if hasTplExtension(r.File.Path) {
 				tpl := ogdl.NewTemplate(string(r.File.Content))
 
 				r.Context.Set("mime", "")
@@ -227,4 +229,14 @@ func (r *Request) Process(srv *Server) error {
 	}
 
 	return nil
+}
+
+func hasTplExtension(s string) bool {
+	for _, v := range TplExtensions {
+		if strings.HasSuffix(s, v) {
+			return true
+		}
+	}
+
+	return false
 }
