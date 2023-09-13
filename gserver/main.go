@@ -93,10 +93,11 @@ func main() {
 
 	// srv.Login = gserver.LoginService{}
 	srv.ContextService = context.ContextService{}
+	srv.ContextService.GlobalContext(srv)
 
 	// Middleware chains
 	staticHandler := srv.StaticFileHandler(hosts, false)
-	dynamicHandler := alice.New(srv.LoginAdapter(), gserver.AccessAdapter("bla")).Then(srv.DynamicHandler(hosts))
+	dynamicHandler := alice.New(srv.LoginAdapterHtpasswd() /*, gserver.AccessAdapter("bla")*/).Then(srv.DynamicHandler(hosts))
 
 	router := fr.RouterFunc(func(req *http.Request) http.Handler {
 		return fr.Chain(fr.New("/favicon.ico", staticHandler),
