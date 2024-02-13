@@ -2,8 +2,8 @@ package context
 
 import (
 	"github.com/rveen/golib/document"
-
 	"github.com/rveen/golib/files"
+	"github.com/rveen/golib/gosql"
 	"github.com/rveen/golib/html"
 	"github.com/rveen/gserver"
 	"github.com/rveen/ogdl"
@@ -27,6 +27,7 @@ func (c ContextService) GlobalContext(srv *gserver.Server) {
 	srv.Context.Set("docPartP1", docPartP1)
 	srv.Context.Set("files", &files.Files{})
 	srv.Context.Set("html", &html.Html{})
+	srv.Context.Set("sql", &gosql.Db{})
 
 	for _, c := range srv.HostContexts {
 		c.Set("T", template)
@@ -39,6 +40,7 @@ func (c ContextService) GlobalContext(srv *gserver.Server) {
 		c.Set("docPartP1", docPartP1)
 		c.Set("files", &files.Files{})
 		c.Set("html", &html.Html{})
+		c.Set("sql", &gosql.Db{})
 	}
 }
 
