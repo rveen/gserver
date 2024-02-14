@@ -8,34 +8,32 @@
 //
 // Summary of features
 //
-//  - Any path of the form /[user]/file/* is served as static (StaticHandler) and
-//    converted to /files/user/*
-//  - Any other path is handled by Handler as follows.
-//  - Path elements of the form @rev are taken as revisions.
-//  - Path elements of the form _t (t != number) are taken as variables
-//  - Extensions of files are optional (if the file name is unique)
-//  - index.* (if found) is returned for paths that point to directories.
-//  - OGDL templates are processed
-//  - Markdown is processed
-//  - The root directory must be a standard directory. Below there can be versioned
-//    repositories
-//  - The path can continue into data files and documents (markdown)
+//   - Any path of the form /[user]/file/* is served as static (StaticHandler) and
+//     converted to /files/user/*
+//   - Any other path is handled by Handler as follows.
+//   - Path elements of the form @rev are taken as revisions.
+//   - Path elements of the form _t (t != number) are taken as variables
+//   - Extensions of files are optional (if the file name is unique)
+//   - index.* (if found) is returned for paths that point to directories.
+//   - OGDL templates are processed
+//   - Markdown is processed
+//   - The root directory must be a standard directory. Below there can be versioned
+//     repositories
+//   - The path can continue into data files and documents (markdown)
 //
-// Authentication and sessions
+// # Authentication and sessions
 //
 // - htpasswd, SVN Auth, ACL
 //
-// Templates
+// # Templates
 //
-//
-// TODO
+// # TODO
 //
 // - relative paths (for images, etc)
 //
 // - math notebook / wiki / forms
 //
 // - resumable file uploader
-//
 package main
 
 import (
@@ -97,7 +95,7 @@ func main() {
 
 	// Middleware chains
 	staticHandler := srv.StaticFileHandler(hosts, false)
-	dynamicHandler := alice.New(srv.LoginAdapterHtpasswd() /*, gserver.AccessAdapter("bla")*/).Then(srv.DynamicHandler(hosts))
+	dynamicHandler := alice.New(srv.LoginAdapterHtpasswd(hosts) /*, gserver.AccessAdapter("bla")*/).Then(srv.DynamicHandler(hosts))
 
 	router := fr.RouterFunc(func(req *http.Request) http.Handler {
 		return fr.Chain(fr.New("/favicon.ico", staticHandler),

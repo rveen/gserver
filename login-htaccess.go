@@ -12,8 +12,7 @@ import (
 // Login: sets r.Form["_user"] to the authenticated user name.
 // Logout: removes the session
 // Other: do nothing
-//
-func (srv *Server) LoginAdapterHtpasswd() func(http.Handler) http.Handler {
+func (srv *Server) LoginAdapterHtpasswd(host bool) func(http.Handler) http.Handler {
 
 	mw := func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -42,7 +41,11 @@ func (srv *Server) LoginAdapterHtpasswd() func(http.Handler) http.Handler {
 						return
 					}
 				}
-				r.Form["_user"] = []string{user}
+
+				rq := ConvertRequest(r, w, host, srv)
+				r.Form["user"] = []string{user}
+				rq.User = user
+				rq.Context.Set("user", user)
 
 				log.Println("user set in r.Form[]:", user)
 

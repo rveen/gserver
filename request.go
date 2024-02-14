@@ -154,7 +154,6 @@ func (r *Request) Get() error {
 }
 
 // Process processes templates, remaining path fragments and sets mime the type
-//
 func (r *Request) Process(srv *Server) error {
 	// Process templates
 	//
@@ -198,7 +197,7 @@ func (r *Request) Process(srv *Server) error {
 			r.File.Content = tpl.Process(r.Context)
 			r.Mime = "text/html"
 
-		default: // 'file'. Check .text and .htm (templates)
+		default: // 'file'. Check if it is a template
 			if hasTplExtension(r.File.Path) {
 				tpl := ogdl.NewTemplate(string(r.File.Content))
 
@@ -209,7 +208,7 @@ func (r *Request) Process(srv *Server) error {
 				mime := r.Context.Get("mime").String()
 				if mime != "" {
 					r.Mime = mime
-					r.File.Content = r.Context.Get("content").Binary()
+					r.File.Content = r.Context.Get("content").Bytes()
 				}
 			}
 		}
