@@ -61,7 +61,7 @@ func getSession(r *http.Request, w http.ResponseWriter, host bool, srv *Server) 
 			return nil
 		}
 
-		sess := session.NewSessionOptions(&session.SessOptions{Timeout: 10 * time.Minute})
+		sess := session.NewSessionOptions(&session.SessOptions{Timeout: 30 * time.Minute})
 		// sess = session.NewSession()
 		srv.Sessions.Add(sess, w)
 
