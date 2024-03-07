@@ -172,7 +172,7 @@ func (r *Request) Process(srv *Server) error {
 	if r.HttpRequest.FormValue("m") != "raw" {
 		switch r.File.Type {
 
-		case "document":
+		case "document", "document_dir":
 			r.File.Content = []byte(r.File.Document.Html())
 			fallthrough
 		case "dir", "data", "log":
