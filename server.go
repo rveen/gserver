@@ -55,7 +55,6 @@ type Server struct {
 // New prepares a Server{} structure initialized with
 // configuration information and a base context that will be
 // the initial context of each request.
-//
 func New(host string) (*Server, error) {
 
 	srv := Server{}
@@ -118,7 +117,6 @@ func New(host string) (*Server, error) {
 // New prepares a Server{} structure initialized with
 // configuration information and a base context that will be
 // the initial context of each request.
-//
 func NewMulti() (*Server, error) {
 
 	srv := Server{}
@@ -214,18 +212,20 @@ func (srv *Server) Serve(secure bool, timeout int, router fr.Router) {
 
 		log.Println("Let's Encrypt domain white list:", srv.Hosts)
 
-		tlsConfig := certManager.TLSConfig()
-		tlsConfig.MinVersion = tls.VersionTLS12
-		tlsConfig.PreferServerCipherSuites = true
-		tlsConfig.CurvePreferences = []tls.CurveID{tls.CurveP256, tls.X25519}
-
+		/*
+			tlsConfig := certManager.TLSConfig()
+			tlsConfig.MinVersion = tls.VersionTLS12
+			tlsConfig.PreferServerCipherSuites = true
+			tlsConfig.CurvePreferences = []tls.CurveID{tls.CurveP256, tls.X25519}
+		*/
 		shttp := &http.Server{
 			Addr:         ":443",
 			Handler:      router,
 			ReadTimeout:  time.Second * time.Duration(timeout),
 			WriteTimeout: time.Second * time.Duration(timeout),
 			// IdleTimeout:  N * time.Second
-			TLSConfig: tlsConfig, /* &tls.Config{	GetCertificate: certManager.GetCertificate,	},*/
+			// TLSConfig: tlsConfig
+			TLSConfig: &tls.Config{GetCertificate: certManager.GetCertificate},
 		}
 
 		// TODO detect localhost and serve self-signed certificates
@@ -254,15 +254,15 @@ func (srv *Server) Serve(secure bool, timeout int, router fr.Router) {
 /*
 func redirect(w http.ResponseWriter, r *http.Request) {
 
-	target := "https://" + r.Host + r.URL.Path
-	if len(r.URL.RawQuery) != 0 {
-		target += "?" + r.URL.RawQuery
+		target := "https://" + r.Host + r.URL.Path
+		if len(r.URL.RawQuery) != 0 {
+			target += "?" + r.URL.RawQuery
+		}
+		log.Printf("redirect to: %s", target)
+		http.Redirect(w, r, target,
+			// see @andreiavrammsd comment: often 307 > 301
+			http.StatusPermanentRedirect)
 	}
-	log.Printf("redirect to: %s", target)
-	http.Redirect(w, r, target,
-		// see @andreiavrammsd comment: often 307 > 301
-		http.StatusPermanentRedirect)
-}
 */
 func serveTLS(host string, srv *http.Server) {
 	if host == "localhost" || host == "" {
