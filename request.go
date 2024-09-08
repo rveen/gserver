@@ -72,7 +72,7 @@ func getSession(r *http.Request, w http.ResponseWriter, host bool, srv *Server) 
 			context.Copy(srv.HostContexts[r.Host])
 		}
 		sess.SetAttr("context", context)
-		context.Set("user", "nobody")
+		// context.Set("user", "nobody")
 
 	} else {
 		context = sess.Attr("context").(*ogdl.Graph)
