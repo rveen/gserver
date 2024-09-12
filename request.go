@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/chmike/securecookie"
 	"github.com/rveen/golib/fn"
 	"github.com/rveen/ogdl"
 	"github.com/rveen/session"
@@ -72,10 +73,15 @@ func getSession(r *http.Request, w http.ResponseWriter, host bool, srv *Server) 
 			context.Copy(srv.HostContexts[r.Host])
 		}
 		sess.SetAttr("context", context)
-		// context.Set("user", "nobody")
 
 	} else {
 		context = sess.Attr("context").(*ogdl.Graph)
+	}
+
+	// Iff the userCookie is set, the set 'user' to its value
+	user := UserCookieValue(r)
+	if user != "" && user != "-" {
+		context.Set("user", user)
 	}
 
 	// Add request specific parameters
@@ -238,4 +244,26 @@ func hasTplExtension(s string) bool {
 	}
 
 	return false
+}
+
+func UserCookie() *securecookie.Obj {
+
+	key := []byte("akeyoflength32by_teswiththispadd")
+	userCookie := securecookie.MustNew("userid", key, securecookie.Params{
+		MaxAge: 0,
+		Secure: false, // cookie received with HTTP for testing purpose
+	})
+	return userCookie
+}
+
+func UserCookieValue(r *http.Request) string {
+
+	userCookie := UserCookie()
+
+	b, err := userCookie.GetValue(nil, r)
+	if err != nil {
+		return ""
+	}
+	log.Printf("user cookie = [%s]\n", string(b))
+	return string(b)
 }
