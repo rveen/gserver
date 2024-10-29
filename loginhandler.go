@@ -25,8 +25,9 @@ func (srv *Server) LoginAdapter(host bool, userdb string) func(http.Handler) htt
 				sess := srv.Sessions.Get(r)
 				if sess != nil {
 					srv.Sessions.Remove(sess, w)
-					userCookie.SetValue(w, []byte("-"))
+
 				}
+				DeleteUserCookie(w)
 
 			} else if r.FormValue("Login") != "" {
 
@@ -37,8 +38,8 @@ func (srv *Server) LoginAdapter(host bool, userdb string) func(http.Handler) htt
 					sess := srv.Sessions.Get(r)
 					if sess != nil {
 						srv.Sessions.Remove(sess, w)
-						userCookie.SetValue(w, []byte("-"))
 					}
+					DeleteUserCookie(w)
 					http.Redirect(w, r, "/login?redirect="+r.URL.Path, 302)
 					return
 				}

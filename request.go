@@ -78,11 +78,15 @@ func getSession(r *http.Request, w http.ResponseWriter, host bool, srv *Server) 
 		context = sess.Attr("context").(*ogdl.Graph)
 	}
 
+	log.Printf("getSession: user is %s\n", context.Node("user").String())
+
 	// Iff the userCookie is set, the set 'user' to its value
 	user := UserCookieValue(r)
 	if user != "" && user != "-" {
 		context.Set("user", user)
 	}
+
+	log.Printf("getSession: and now user is %s\n", context.Node("user").String())
 
 	// Add request specific parameters
 
@@ -248,8 +252,9 @@ func hasTplExtension(s string) bool {
 
 func UserCookie() *securecookie.Obj {
 
-	key := []byte("akeyoflength32by_teswiththispadd")
+	key := []byte("f8hk39o9mx0dmrn1pa39jfla39djm3f0")
 	userCookie := securecookie.MustNew("userid", key, securecookie.Params{
+		Path:   "/",
 		MaxAge: 0,
 		Secure: false, // cookie received with HTTP for testing purpose
 	})
@@ -266,4 +271,17 @@ func UserCookieValue(r *http.Request) string {
 	}
 	log.Printf("user cookie = [%s]\n", string(b))
 	return string(b)
+}
+
+func DeleteUserCookie(w http.ResponseWriter) {
+
+	c := &http.Cookie{
+		Name:     "userid",
+		Value:    "",
+		Path:     "/",
+		MaxAge:   -1,
+		HttpOnly: true,
+	}
+
+	http.SetCookie(w, c)
 }

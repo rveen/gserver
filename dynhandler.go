@@ -1,6 +1,7 @@
 package gserver
 
 import (
+	"github.com/rveen/ogdl"
 	"log"
 	"net/http"
 	"path/filepath"
@@ -11,7 +12,6 @@ import (
 //
 // NOTE See https://github.com/bpowers/seshcookie
 // TODO serve files with http.ServeContent (handles large files with Range requests)
-//
 func (srv *Server) DynamicHandler(host bool) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, rh *http.Request) {
@@ -36,6 +36,13 @@ func (srv *Server) DynamicHandler(host bool) http.HandlerFunc {
 		}
 
 		log.Println("DynHandler", r.Path)
+
+		// Check if path needs a user other than 'nobody'
+		user := r.Context.Node("user").String()
+		if (user == "" || user == "nobody") && !checkPath(r.Path, srv.Config) {
+			http.Redirect(w, rh, "/login?redirect="+rh.URL.Path, 302)
+			return
+		}
 
 		// Get the file (or dir) corresponding to the path
 		err := r.Get()
@@ -67,4 +74,36 @@ func (srv *Server) DynamicHandler(host bool) http.HandlerFunc {
 			w.Write(r.File.Content)
 		}
 	}
+}
+
+func checkPath(path string, cfg *ogdl.Graph) bool {
+
+	if cfg == nil {
+		return true
+	}
+
+	g := cfg.Node("allowed")
+
+	if g != nil {
+		for _, gp := range g.Out {
+			p := gp.ThisString()
+			if strings.HasPrefix(path, p) {
+				return true
+			}
+		}
+	}
+
+	g = cfg.Node("protected")
+
+	if g == nil {
+		return true
+	}
+
+	for _, gp := range g.Out {
+		p := gp.ThisString()
+		if strings.HasPrefix(path, p) {
+			return false
+		}
+	}
+	return true
 }

@@ -57,7 +57,7 @@ func main() {
 	// Bind flags to non-pointer variables. Easier later.
 
 	var logging, verbose, hosts bool
-	var host, secureHost string
+	var host, secureHost, userdb string
 	var timeout, sessionTimeout int
 
 	flag.BoolVar(&logging, "log", true, "turn logging ON/off")
@@ -67,6 +67,7 @@ func main() {
 	flag.StringVar(&secureHost, "S", "", "set secure_host:port")
 	flag.IntVar(&timeout, "t", 10, "set http(s) timeout (seconds)")
 	flag.IntVar(&sessionTimeout, "ts", 30, "set session timeout (minutes)")
+	flag.StringVar(&userdb, "userdb", "htaccess", "user db: sqlite or htaccess (default)")
 
 	flag.Parse()
 
@@ -95,7 +96,7 @@ func main() {
 
 	// Middleware chains
 	staticHandler := srv.StaticFileHandler(hosts, false)
-	dynamicHandler := alice.New(srv.LoginAdapterHtpasswd(hosts) /*, gserver.AccessAdapter("bla")*/).Then(srv.DynamicHandler(hosts))
+	dynamicHandler := alice.New(srv.LoginAdapter(hosts, userdb) /*, gserver.AccessAdapter("bla")*/).Then(srv.DynamicHandler(hosts))
 
 	router := fr.RouterFunc(func(req *http.Request) http.Handler {
 		return fr.Chain(fr.New("/favicon.ico", staticHandler),
