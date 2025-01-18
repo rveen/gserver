@@ -19,7 +19,6 @@ import (
 // NOTE This handler needs context information (access to Server{})
 // NOTE See https://github.com/bpowers/seshcookie
 // TODO serve files with http.ServeContent (handles large files with Range requests)
-//
 func FileHandler_(srv *Server, host bool) http.Handler {
 
 	fn := func(w http.ResponseWriter, r *http.Request) {

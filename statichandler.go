@@ -11,7 +11,6 @@ import (
 //
 // if host is true, the hostname is prepended to the path
 // if userspace is true, the first element of a path is taken as a user
-//
 func (srv *Server) StaticFileHandler(host, userspace bool) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {

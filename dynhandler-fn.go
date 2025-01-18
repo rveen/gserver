@@ -13,7 +13,6 @@ import (
 //
 // NOTE See https://github.com/bpowers/seshcookie
 // TODO serve files with http.ServeContent (handles large files with Range requests)
-//
 func (srv *Server) DynamicHandlerFn(host bool, fs *fn.FNode) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, rh *http.Request) {

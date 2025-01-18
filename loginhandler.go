@@ -2,8 +2,10 @@ package gserver
 
 import (
 	"database/sql"
+	"github.com/go-ldap/ldap/v3"
 	"log"
 	"net/http"
+	"fmt"
 
 	auth "github.com/abbot/go-http-auth"
 	_ "modernc.org/sqlite"
@@ -34,7 +36,7 @@ func (srv *Server) LoginAdapter(host bool, userdb string) func(http.Handler) htt
 				user := r.FormValue("User")
 				pass := r.FormValue("Password")
 
-				if !validateUser(user, pass, userdb) {
+				if !validateUser(user, pass, userdb,srv) {
 					sess := srv.Sessions.Get(r)
 					if sess != nil {
 						srv.Sessions.Remove(sess, w)
@@ -68,7 +70,7 @@ func (srv *Server) LoginAdapter(host bool, userdb string) func(http.Handler) htt
 	return mw
 }
 
-func validateUser(user, pass, userdb string) bool {
+func validateUser(user, pass, userdb string, srv *Server) bool {
 
 	switch userdb {
 
@@ -96,6 +98,67 @@ func validateUser(user, pass, userdb string) bool {
 		row.Scan(&name, &passwd)
 		return passwd == pass
 
+	case "ldap":
+
+		c := srv.Config.Get("ldap")
+		host := c.Node("server").String()
+		buser := c.Node("user").String()
+		bpass := c.Node("password").String()
+		dn := c.Node("basedn").String()
+
+		l, err := ldap.Dial("tcp", host)
+		if err != nil {
+			log.Println(err)
+			return false
+		}
+		defer l.Close()
+
+		// Reconnect with TLS
+		/*
+		err = l.StartTLS(&tls.Config{InsecureSkipVerify: true})
+		if err != nil {
+			log.Println(err)
+			return false
+		}
+		*/
+		// First bind with a read only user
+		err = l.Bind(buser,bpass)
+		if err != nil {
+			log.Println(err)
+			return false
+		}
+
+		// Search for the given username
+		searchRequest := ldap.NewSearchRequest(
+			dn,
+			ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
+			fmt.Sprintf("(&(objectClass=organizationalPerson)(uid=%s))", user),
+			[]string{"dn"},
+			nil,
+		)
+
+		sr, err := l.Search(searchRequest)
+		if err != nil {
+			log.Println(err)
+			return false
+		}
+
+		if len(sr.Entries) != 1 {
+			log.Println(err)
+			return false
+		}
+
+		userdn := sr.Entries[0].DN
+
+		// Bind as the user to verify their password
+		err = l.Bind(userdn, pass)
+		if err != nil {
+			log.Println(err)
+			return false
+		}
+		return true
+
 	}
+
 	return false
 }

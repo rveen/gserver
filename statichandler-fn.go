@@ -12,7 +12,6 @@ import (
 // StaticFileHandler returns a handler that processes static files.
 //
 // if host is true, the hostname is prepended to the path
-//
 func (srv *Server) StaticFileHandlerFn(host bool, fs *fn.FNode) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
