@@ -32,6 +32,10 @@ func ConvertRequest(r *http.Request, w http.ResponseWriter, host bool, srv *Serv
 	rq := &Request{HttpRequest: r}
 
 	rq.Context = getSession(r, w, host, srv)
+	if rq.Context == nil {
+		// Could not create a new session
+		return nil
+	}
 	rq.User = rq.Context.Get("user").String()
 
 	// Add host name in case of multihost
@@ -58,7 +62,7 @@ func getSession(r *http.Request, w http.ResponseWriter, host bool, srv *Server) 
 	// Get the context from the session, or create a new one
 	if sess == nil {
 
-		if srv.Sessions.Len() > 10000 {
+		if srv.Sessions.Len() > srv.MaxSessions {
 			return nil
 		}
 

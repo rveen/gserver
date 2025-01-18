@@ -44,6 +44,7 @@ type Server struct {
 	DocRoot        string
 	UploadDir      string
 	Sessions       session.Manager
+	MaxSessions	   int
 	Plugins        []string
 	Login          login
 	ContextService contextService
@@ -110,7 +111,8 @@ func New(host string) (*Server, error) {
 	// Session manager
 	session.Global.Close()
 	srv.Sessions = session.NewCookieManagerOptions(session.NewInMemStore(), &session.CookieMngrOptions{AllowHTTP: true, CookieMaxAge: time.Hour * 24 * 90})
-
+	srv.MaxSessions = 10000
+	
 	return &srv, nil
 }
 
