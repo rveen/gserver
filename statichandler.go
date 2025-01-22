@@ -11,7 +11,7 @@ import (
 //
 // if host is true, the hostname is prepended to the path
 // if userspace is true, the first element of a path is taken as a user
-func (srv *Server) StaticFileHandler(host, userspace bool) http.HandlerFunc {
+func (srv *Server) StaticFileHandler(host, userspace, protect bool) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 
@@ -39,6 +39,15 @@ func (srv *Server) StaticFileHandler(host, userspace bool) http.HandlerFunc {
 				return
 			}
 		*/
+
+		// Check that a valid user has been set
+		if protect {
+			u := UserCookieValue(r)
+			if u =="" || u == "nobody" {
+				http.Error(w, "Need to log in to access this", 401)
+				return
+			}
+		}
 
 		// Get the file. We make a copy of the struct!
 		fd := *srv.Root

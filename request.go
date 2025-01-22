@@ -273,7 +273,6 @@ func UserCookieValue(r *http.Request) string {
 	if err != nil {
 		return ""
 	}
-	log.Printf("user cookie = [%s]\n", string(b))
 	return string(b)
 }
 

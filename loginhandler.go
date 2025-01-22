@@ -5,6 +5,7 @@ import (
 	"github.com/go-ldap/ldap/v3"
 	"log"
 	"net/http"
+	uu "net/url"
 	"fmt"
 
 	auth "github.com/abbot/go-http-auth"
@@ -50,6 +51,7 @@ func (srv *Server) LoginAdapter(host bool, userdb string) func(http.Handler) htt
 				r.Form["user"] = []string{user}
 				rq.User = user
 				rq.Context.Set("user", user)
+				r.URL.User = uu.User(user)
 
 				// Set user cookie.
 				// This is the way to communicate the user to the request.
