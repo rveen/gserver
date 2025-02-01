@@ -24,27 +24,11 @@ func (srv *Server) StaticFileHandler(host, userspace, protect bool) http.Handler
 
 		log.Println("StaticHandler", path)
 
-		/*
-			for name, values := range r.Header {
-				// Loop over all values for the name.
-				for _, value := range values {
-					log.Println(" - header:", name, value)
-				}
-			}
-
-			// Referrer based file access limitation (future?)
-			ref := r.Header["Referer"]
-			if ref == nil || !strings.Contains(ref[0], "/item/") {
-				http.Error(w, "file cannot be accessed directly", 500)
-				return
-			}
-		*/
-
 		// Check that a valid user has been set
 		if protect {
 			u := UserCookieValue(r)
 			if u =="" || u == "nobody" {
-				http.Error(w, "Need to log in to access this", 401)
+				http.Error(w, "Need to log in to access this content", 401)
 				return
 			}
 		}
