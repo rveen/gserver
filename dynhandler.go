@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 // DynamicHandler ...
@@ -16,9 +17,13 @@ func (srv *Server) DynamicHandler(host bool) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, rh *http.Request) {
 
-		if rh.FormValue("UploadFiles") != "" {
+		/*
+			if rh.FormValue("UploadFiles") != "" {
 
-		}
+			} */
+
+		log.Println("DynHandlerFn", rh.URL.Path)
+		t := time.Now().UnixMicro()
 
 		// Adapt the request to gserver.Request format.
 		r := ConvertRequest(rh, w, host, srv)
@@ -34,8 +39,6 @@ func (srv *Server) DynamicHandler(host bool) http.HandlerFunc {
 			files := data.Add("files")
 			files.Add(gf)
 		}
-
-		log.Println("DynHandler", r.Path)
 
 		// Check if path needs a user other than 'nobody'
 		user := r.Context.Node("user").String()
@@ -73,6 +76,7 @@ func (srv *Server) DynamicHandler(host bool) http.HandlerFunc {
 		} else {
 			w.Write(r.File.Content)
 		}
+		log.Printf("DynHandler END %d us\n", time.Now().UnixMicro()-t)
 	}
 }
 

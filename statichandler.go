@@ -27,7 +27,7 @@ func (srv *Server) StaticFileHandler(host, userspace, protect bool) http.Handler
 		// Check that a valid user has been set
 		if protect {
 			u := UserCookieValue(r)
-			if u =="" || u == "nobody" {
+			if u == "" || u == "nobody" {
 				http.Error(w, "Need to log in to access this content", 401)
 				return
 			}
@@ -59,5 +59,6 @@ func (srv *Server) StaticFileHandler(host, userspace, protect bool) http.Handler
 
 		w.Header().Set("Cache-Control", "public, max-age=7200")
 		w.Write(file.Content)
+		log.Println("StaticHandler END", path)
 	}
 }

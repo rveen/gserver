@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/rveen/golib/fn"
 )
@@ -16,6 +17,9 @@ import (
 func (srv *Server) DynamicHandlerFn(host bool, fs *fn.FNode) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, rh *http.Request) {
+
+		log.Println("DynHandlerFn", rh.URL.Path)
+		t := time.Now().UnixMicro()
 
 		// Adapt the request to gserver.Request format.
 		r := ConvertRequest(rh, w, host, srv)
@@ -31,8 +35,6 @@ func (srv *Server) DynamicHandlerFn(host bool, fs *fn.FNode) http.HandlerFunc {
 			files := data.Add("files")
 			files.Add(gf)
 		}
-
-		log.Println("DynHandlerFn", r.Path)
 
 		// Get the file (or dir) corresponding to the path
 		fd := *fs
@@ -65,5 +67,6 @@ func (srv *Server) DynamicHandlerFn(host bool, fs *fn.FNode) http.HandlerFunc {
 		} else {
 			w.Write(r.File.Content)
 		}
+		log.Printf("DynHandlerFn END %d us\n", time.Now().UnixMicro()-t)
 	}
 }
