@@ -95,12 +95,12 @@ func main() {
 	srv.ContextService.GlobalContext(srv)
 
 	// Middleware chains
-	staticHandler := srv.StaticFileHandler(hosts, false)
+	staticHandler := srv.StaticFileHandler(hosts, false, false)
 	dynamicHandler := alice.New(srv.LoginAdapter(hosts, userdb) /*, gserver.AccessAdapter("bla")*/).Then(srv.DynamicHandler(hosts))
 
 	router := fr.RouterFunc(func(req *http.Request) http.Handler {
 		return fr.Chain(fr.New("/favicon.ico", staticHandler),
-
+			fr.New("/.well-known/*filepath", staticHandler), // Letsencript ACME
 			fr.New("/debug/pprof/*filepath", http.HandlerFunc(pprof.Index)),
 
 			fr.New("/static/*filepath" /*staticEmbedded*/, staticHandler),

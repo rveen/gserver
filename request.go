@@ -63,6 +63,7 @@ func getSession(r *http.Request, w http.ResponseWriter, host bool, srv *Server) 
 	if sess == nil {
 
 		if srv.Sessions.Len() > srv.MaxSessions {
+			log.Println("max number of session reached:", srv.MaxSessions)
 			return nil
 		}
 
@@ -82,15 +83,13 @@ func getSession(r *http.Request, w http.ResponseWriter, host bool, srv *Server) 
 		context = sess.Attr("context").(*ogdl.Graph)
 	}
 
-	log.Printf("getSession: user is %s\n", context.Node("user").String())
-
 	// Iff the userCookie is set, the set 'user' to its value
 	user := UserCookieValue(r)
 	if user != "" && user != "-" {
 		context.Set("user", user)
 	}
 
-	log.Printf("getSession: and now user is %s\n", context.Node("user").String())
+	log.Printf("getSession: user is %s\n", user)
 
 	// Add request specific parameters
 

@@ -44,7 +44,7 @@ type Server struct {
 	DocRoot        string
 	UploadDir      string
 	Sessions       session.Manager
-	MaxSessions	   int
+	MaxSessions    int
 	Plugins        []string
 	Login          login
 	ContextService contextService
@@ -112,7 +112,7 @@ func New(host string) (*Server, error) {
 	session.Global.Close()
 	srv.Sessions = session.NewCookieManagerOptions(session.NewInMemStore(), &session.CookieMngrOptions{AllowHTTP: true, CookieMaxAge: time.Hour * 24 * 90})
 	srv.MaxSessions = 10000
-	
+
 	return &srv, nil
 }
 
@@ -209,7 +209,8 @@ func (srv *Server) Serve(secure bool, timeout int, router fr.Router) {
 		certManager := autocert.Manager{
 			Prompt:     autocert.AcceptTOS,
 			HostPolicy: autocert.HostWhitelist(srv.Hosts...),
-			Cache:      autocert.DirCache(".certs"), //folder for storing certificates
+			Cache:      autocert.DirCache(".certs"), //folder for storing certificates,
+			Email:      srv.Config.Get("acme.email").String(),
 		}
 
 		log.Println("Let's Encrypt domain white list:", srv.Hosts)
