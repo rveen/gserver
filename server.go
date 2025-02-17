@@ -44,6 +44,7 @@ type Server struct {
 	DocRoot        string
 	UploadDir      string
 	Sessions       session.Manager
+	DefaultUser    string
 	MaxSessions    int
 	Plugins        []string
 	Login          login
