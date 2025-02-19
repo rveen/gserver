@@ -95,7 +95,7 @@ func getSession(r *http.Request, w http.ResponseWriter, host bool, srv *Server) 
 		context.Set("user", srv.DefaultUser)
 	}
 
-	log.Printf("getSession: user is %s\n", user)
+	log.Printf("getSession: user is %s\n", context.Node("user").String())
 
 	// Add request specific parameters
 

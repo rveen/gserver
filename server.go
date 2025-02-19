@@ -2,6 +2,7 @@ package gserver
 
 import (
 	// "crypto/tls"
+	"database/sql"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -45,6 +46,7 @@ type Server struct {
 	UploadDir      string
 	Sessions       session.Manager
 	DefaultUser    string
+	UserDb         *sql.DB
 	MaxSessions    int
 	Plugins        []string
 	Login          login
