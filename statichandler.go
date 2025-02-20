@@ -27,7 +27,7 @@ func (srv *Server) StaticFileHandler(host, userspace, protect bool) http.Handler
 		// Check that a valid user has been set
 		if protect {
 			u := UserCookieValue(r)
-			if u == "" || u == "nobody" {
+			if (u == "" || u == "nobody") && srv.DefaultUser == "" {
 				http.Error(w, "Need to log in to access this content", 401)
 				return
 			}
