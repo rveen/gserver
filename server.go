@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"time"
+	"errors"
 
 	"github.com/rveen/golib/fn"
 
@@ -75,11 +76,14 @@ func New(host string) (*Server, error) {
 	// Server configuration file (optional)
 	srv.Config = ogdl.FromFile(".conf/config.ogdl")
 	if srv.Config == nil {
-		srv.Config = ogdl.New(nil)
+		return nil, errors.New("missing .conf/config.ogdl file")
 	}
 
 	// Base context for templates (optional)
 	srv.Context = ogdl.FromFile(".conf/context.ogdl")
+	if srv.Context == nil {
+		return nil, errors.New("missing .conf/context.ogdl file")
+	}
 
 	// Preload templates
 	tpls := srv.Config.Get("templates")

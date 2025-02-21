@@ -100,6 +100,18 @@ func validateUser(user, pass, userdb string, srv *Server) bool {
 		row.Scan(&name, &passwd)
 		return passwd == pass
 
+	case "sql":
+
+		if srv.UserDb == nil {
+			log.Println("srv.UserDb is nil")
+			return false
+		}
+
+		row := srv.UserDb.QueryRow("select password from users where user='"+user+"'")
+		var name, passwd string
+		row.Scan(&name, &passwd)
+		return passwd == pass
+		
 	case "ldap":
 
 		c := srv.Config.Get("ldap")

@@ -18,7 +18,7 @@ const (
 )
 
 func init() {
-	os.MkdirAll(FileDir, 0644)
+//	os.MkdirAll(FileDir, 0644)
 	os.MkdirAll(TmpDir, 0644)
 }
 

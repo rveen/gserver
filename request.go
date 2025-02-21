@@ -155,12 +155,19 @@ func (r *Request) Get() error {
 
 	// Set R.urlbase (for setting <base href="$R.urlbase"> allowing relative URLs)
 	base := r.HttpRequest.URL.Path
+	log.Printf("URL.Path: %s\n", base)
+	base = strings.ReplaceAll(base,"\\","/")
+	log.Printf("URL.Path (2): %s\n", base)
+
 	if r.File.Type != "dir" && strings.HasPrefix(r.File.Path, r.File.Root) {
 		base = filepath.Dir(r.File.Path[len(r.File.Root):])
 	}
+	base = strings.ReplaceAll(base,"\\","/")
 	if base[len(base)-1] != '/' {
 		base += "/"
 	}
+
+	log.Printf("URL.Path (3): %s\n", base)
 
 	data := r.Context.Node("R")
 	data.Set("urlbase", base)

@@ -16,7 +16,8 @@ func (srv *Server) StaticFileHandler(host, userspace, protect bool) http.Handler
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		// Needed?
-		path := filepath.Clean(r.URL.Path)
+		// path := filepath.Clean(r.URL.Path) : Windows shit
+		path := r.URL.Path
 
 		if host {
 			path = r.Host + "/" + path
