@@ -69,6 +69,7 @@ func getSession(r *http.Request, w http.ResponseWriter, host bool, srv *Server) 
 
 		sess := session.NewSessionOptions(&session.SessOptions{Timeout: 30 * time.Minute})
 		// sess = session.NewSession()
+		log.Println("session created. Total number:", srv.Sessions.Len())
 		srv.Sessions.Add(sess, w)
 
 		context = ogdl.New(nil)
@@ -156,13 +157,13 @@ func (r *Request) Get() error {
 	// Set R.urlbase (for setting <base href="$R.urlbase"> allowing relative URLs)
 	base := r.HttpRequest.URL.Path
 	log.Printf("URL.Path: %s\n", base)
-	base = strings.ReplaceAll(base,"\\","/")
+	base = strings.ReplaceAll(base, "\\", "/")
 	log.Printf("URL.Path (2): %s\n", base)
 
 	if r.File.Type != "dir" && strings.HasPrefix(r.File.Path, r.File.Root) {
 		base = filepath.Dir(r.File.Path[len(r.File.Root):])
 	}
-	base = strings.ReplaceAll(base,"\\","/")
+	base = strings.ReplaceAll(base, "\\", "/")
 	if base[len(base)-1] != '/' {
 		base += "/"
 	}
