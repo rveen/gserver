@@ -60,6 +60,6 @@ func (srv *Server) StaticFileHandler(host, userspace, protect bool) http.Handler
 
 		w.Header().Set("Cache-Control", "public, max-age=7200")
 		w.Write(file.Content)
-		log.Println("StaticHandler END", path)
+		// log.Println("StaticHandler END", path)
 	}
 }

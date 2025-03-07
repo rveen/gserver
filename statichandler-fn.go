@@ -50,6 +50,6 @@ func (srv *Server) StaticFileHandlerFn(host bool, fs *fn.FNode) http.HandlerFunc
 
 		w.Header().Set("Cache-Control", "public, max-age=36000")
 		w.Write(file.Content)
-		log.Println("StaticHandler-fn END", path)
+		// log.Println("StaticHandler-fn END", path)
 	}
 }

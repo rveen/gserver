@@ -101,7 +101,11 @@ func getSession(r *http.Request, w http.ResponseWriter, host bool, srv *Server) 
 	// Add request specific parameters
 
 	data := context.Create("R")
-	data.Set("url", r.URL.Path)
+	ur := r.URL.Path
+	if u == "" {
+		ur = "/"
+	}
+	data.Set("url", ur)
 	data.Set("home", srv.Root.Root)
 
 	r.ParseForm()
@@ -142,6 +146,8 @@ func (r *Request) Get() error {
 
 	var err error
 
+	log.Printf("URL.Path (0): %s\n", r.Path)
+
 	if r.HttpRequest.FormValue("m") == "raw" {
 		err = r.File.GetRaw(r.Path)
 	} else {
@@ -152,19 +158,15 @@ func (r *Request) Get() error {
 		return err
 	}
 
-	// log.Printf("request.Get: [%s] [%s] [%s] [type=%s]\n", r.File.Root, r.File.Path, r.Path, r.File.Type)
-
 	// Set R.urlbase (for setting <base href="$R.urlbase"> allowing relative URLs)
 	base := r.HttpRequest.URL.Path
 	log.Printf("URL.Path: %s\n", base)
-	base = strings.ReplaceAll(base, "\\", "/")
-	log.Printf("URL.Path (2): %s\n", base)
 
 	if r.File.Type != "dir" && strings.HasPrefix(r.File.Path, r.File.Root) {
 		base = filepath.Dir(r.File.Path[len(r.File.Root):])
 	}
 	base = strings.ReplaceAll(base, "\\", "/")
-	if base[len(base)-1] != '/' {
+	if len(base) > 1 && base[len(base)-1] != '/' {
 		base += "/"
 	}
 
