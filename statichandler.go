@@ -23,7 +23,7 @@ func (srv *Server) StaticFileHandler(host, userspace, protect bool) http.Handler
 			path = r.Host + "/" + path
 		}
 
-		log.Println("StaticHandler", path)
+		log.Println("StaticHandler", path, r.RemoteAddr)
 
 		// Check that a valid user has been set
 		if protect {

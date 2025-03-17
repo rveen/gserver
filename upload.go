@@ -18,7 +18,7 @@ const (
 )
 
 func init() {
-//	os.MkdirAll(FileDir, 0644)
+	//	os.MkdirAll(FileDir, 0644)
 	os.MkdirAll(TmpDir, 0644)
 }
 
@@ -26,7 +26,7 @@ func fileUpload(r *http.Request, user string) (*ogdl.Graph, error) {
 
 	// Handle file uploads. We call ParseMultipartForm here so that r.Form[] is
 	// initialized. If it isn't a multipart this gives an error.
-	err := r.ParseMultipartForm(10000000) // 10M
+	err := r.ParseMultipartForm(50000000) // 50M
 	if err != nil {
 		return nil, err
 	}
@@ -63,6 +63,7 @@ func fileUpload(r *http.Request, user string) (*ogdl.Graph, error) {
 
 			wfile, err = os.Create(folder + "/" + v.Filename)
 			if err != nil {
+				log.Println(err)
 				return nil, err
 			}
 			defer wfile.Close()
@@ -75,6 +76,7 @@ func fileUpload(r *http.Request, user string) (*ogdl.Graph, error) {
 					h.Write(buf[:n])
 				}
 				if err != nil {
+					log.Println(err)
 					break
 				}
 			}
@@ -83,13 +85,17 @@ func fileUpload(r *http.Request, user string) (*ogdl.Graph, error) {
 
 			log.Println("uploading file with MD5", hex.EncodeToString(h.Sum(nil)))
 			log.Println("moving to", fname)
-			os.Rename(folder+"/"+v.Filename, fname)
+			err = os.Rename(folder+"/"+v.Filename, fname)
+			if err != nil {
+				cwd, _ := os.Getwd()
+				log.Printf("cwd %s src dir %s dest dir %s\n", cwd, folder+"/"+v.Filename, fname)
+				log.Println(err)
+			}
 
 			f := g.Add("-")
 			f.Add("path").Add(fname)
 			f.Add("name").Add(v.Filename[:len(v.Filename)-len(ext)])
 			f.Add("fullname").Add(v.Filename)
-
 		}
 	}
 

@@ -57,8 +57,10 @@ func main() {
 	// Bind flags to non-pointer variables. Easier later.
 
 	var logging, verbose, hosts bool
-	var host, secureHost, userdb string
+	var host, secureHost, userdb, email string
 	var timeout, sessionTimeout int
+
+	// flag.BoolVar(&logging, "static", false, "serve all files static") --> disables extension discovery
 
 	flag.BoolVar(&logging, "log", true, "turn logging ON/off")
 	flag.BoolVar(&hosts, "m", false, "enable multiple hosts (path on disk are affected")
@@ -68,6 +70,7 @@ func main() {
 	flag.IntVar(&timeout, "t", 10, "set http(s) timeout (seconds)")
 	flag.IntVar(&sessionTimeout, "ts", 30, "set session timeout (minutes)")
 	flag.StringVar(&userdb, "userdb", "htaccess", "user db: sqlite or htaccess (default)")
+	flag.StringVar(&email, "email", "", "email for Let's Encrypt SSL")
 
 	flag.Parse()
 
@@ -75,6 +78,11 @@ func main() {
 	if secureHost != "" {
 		host = secureHost
 		secure = true
+	}
+
+	if secure && email == "" && host != ":443" && host != "localhost:443" {
+		log.Println("Secure host needs an email (for Let's Encrypt)")
+		return
 	}
 
 	var srv *gserver.Server
@@ -118,5 +126,5 @@ func main() {
 	// Overwrite the original file handler with this one
 	srv.Root = fn.New(srv.DocRoot)
 
-	srv.Serve(secure, timeout, router)
+	srv.Serve(secure, timeout, router, email)
 }

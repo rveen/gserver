@@ -22,7 +22,7 @@ func (srv *Server) StaticFileHandlerFn(host bool, fs *fn.FNode) http.HandlerFunc
 			path = r.Host + "/" + path
 		}
 
-		log.Println("StaticHandler-fn", path)
+		log.Println("StaticHandler-fn", path, r.RemoteAddr)
 
 		// Get the file. Make a copy of the struct!
 		fd := *fs

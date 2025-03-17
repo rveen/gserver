@@ -1,12 +1,13 @@
 package gserver
 
 import (
-	"github.com/rveen/ogdl"
 	"log"
 	"net/http"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/rveen/ogdl"
 )
 
 // DynamicHandler ...
@@ -22,7 +23,7 @@ func (srv *Server) DynamicHandler(host bool) http.HandlerFunc {
 
 			} */
 
-		log.Println("DynHandlerFn", rh.URL.Path)
+		log.Println("DynHandlerFn", rh.URL.Path, rh.RemoteAddr)
 		t := time.Now().UnixMicro()
 
 		// Adapt the request to gserver.Request format.
