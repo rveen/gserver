@@ -16,7 +16,8 @@ import (
 	rpc "github.com/rveen/ogdl/ogdlrf"
 	"github.com/rveen/session"
 
-	"github.com/caddyserver/certmagic"
+	"github.com/rveen/certmagic"
+	// A certmagic version with Shutdown() function!
 )
 
 type login interface {
@@ -229,15 +230,18 @@ func (srv *Server) Serve(secure bool, timeout int, router fr.Router, email strin
 		}
 
 	} else {
-		if srv.Host != "" {
-			log.Println("starting non-SSL, host:", srv.Host)
-			http.ListenAndServe(srv.Host, router)
 
-		} else {
-			log.Println("starting non-SSL, host:", ":80")
-			http.ListenAndServe(":80", router)
+		if srv.Host == "" {
+			srv.Host = ":80"
 		}
+		server := &http.Server{Addr: srv.Host, Handler: router}
+		log.Println("starting non-SSL, host:", srv.Host)
+		server.ListenAndServe()
 	}
+}
+
+func (srv *Server) Shutdown() {
+	certmagic.Shutdown()
 }
 
 func serveTLS(host string, srv *http.Server) {
