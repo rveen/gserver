@@ -18,7 +18,7 @@ func (srv *Server) DynamicHandlerFn(host bool, fs *fn.FNode) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, rh *http.Request) {
 
-		log.Println("DynHandlerFn", rh.URL.Path)
+		log.Println("DynHandlerFn", rh.URL.Path, rh.RemoteAddr)
 		t := time.Now().UnixMicro()
 
 		// Adapt the request to gserver.Request format.

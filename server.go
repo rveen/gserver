@@ -1,24 +1,23 @@
 package gserver
 
 import (
-	// "crypto/tls"
 	"database/sql"
+	"errors"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
-	"errors"
-
-	"github.com/rveen/golib/fn"
-
-	"crypto/tls"
 
 	fr "github.com/DATA-DOG/fastroute"
+	"github.com/rveen/golib/fn"
 	"github.com/rveen/ogdl"
 	rpc "github.com/rveen/ogdl/ogdlrf"
 	"github.com/rveen/session"
-	"golang.org/x/crypto/acme/autocert"
+
+	"github.com/rveen/certmagic"
+	// A certmagic version with Shutdown() function!
 )
 
 type login interface {
@@ -140,6 +139,8 @@ func NewMulti() (*Server, error) {
 	// Default host
 	srv.Host = ":80"
 
+	srv.MaxSessions = 10000
+
 	// Server configuration file (optional)
 	srv.Config = ogdl.FromFile(".conf/config.ogdl")
 	if srv.Config == nil {
@@ -152,7 +153,9 @@ func NewMulti() (*Server, error) {
 	srv.HostContexts = make(map[string]*ogdl.Graph)
 
 	for _, f := range files {
-		if f.Name()[0] == '.' || f.Name()[0] == '_' {
+
+		// make sure 'file' and other similar entries are filtered out
+		if f.Name()[0] == '.' || f.Name()[0] == '_' || !strings.Contains(f.Name(), ".") {
 			continue
 		}
 		fi, err := os.Stat(f.Name())
@@ -205,7 +208,7 @@ func NewMulti() (*Server, error) {
 	return &srv, nil
 }
 
-func (srv *Server) Serve(secure bool, timeout int, router fr.Router) {
+func (srv *Server) Serve(secure bool, timeout int, router fr.Router, email string) {
 	// Serve either HTTP or HTTPS.
 	// In case of HTTPS, all requests to HTTP are redirected.
 	//
@@ -213,67 +216,34 @@ func (srv *Server) Serve(secure bool, timeout int, router fr.Router) {
 
 	if secure {
 
-		certManager := autocert.Manager{
-			Prompt:     autocert.AcceptTOS,
-			HostPolicy: autocert.HostWhitelist(srv.Hosts...),
-			Cache:      autocert.DirCache(".certs"), //folder for storing certificates,
-			Email:      srv.Config.Get("acme.email").String(),
+		// read and agree to your CA's legal documents
+		certmagic.DefaultACME.Agreed = true
+
+		// provide an email address
+		certmagic.DefaultACME.Email = email
+
+		// use the staging endpoint while we're developing
+		certmagic.DefaultACME.CA = certmagic.LetsEncryptProductionCA
+		err := certmagic.HTTPS(srv.Hosts, router)
+		if err != nil {
+			log.Println(err.Error())
 		}
 
-		log.Println("Let's Encrypt domain white list:", srv.Hosts)
-
-		/*
-			tlsConfig := certManager.TLSConfig()
-			tlsConfig.MinVersion = tls.VersionTLS12
-			tlsConfig.PreferServerCipherSuites = true
-			tlsConfig.CurvePreferences = []tls.CurveID{tls.CurveP256, tls.X25519}
-		*/
-		shttp := &http.Server{
-			Addr:         ":443",
-			Handler:      router,
-			ReadTimeout:  time.Second * time.Duration(timeout),
-			WriteTimeout: time.Second * time.Duration(timeout),
-			// IdleTimeout:  N * time.Second
-			// TLSConfig: tlsConfig
-			TLSConfig: &tls.Config{GetCertificate: certManager.GetCertificate},
-		}
-
-		// TODO detect localhost and serve self-signed certificates
-		go serveTLS(":443", shttp)
-
-		s := &http.Server{
-			Addr:         ":80",
-			Handler:      certManager.HTTPHandler(nil), //http.HandlerFunc(redirect),
-			ReadTimeout:  time.Second * time.Duration(timeout),
-			WriteTimeout: time.Second * time.Duration(timeout),
-		}
-		log.Println("starting SSL (with redirect from non-SSL).")
-		s.ListenAndServe()
 	} else {
-		if srv.Host != "" {
-			log.Println("starting non-SSL, host:", srv.Host)
-			http.ListenAndServe(srv.Host, router)
 
-		} else {
-			log.Println("starting non-SSL, host:", ":80")
-			http.ListenAndServe(":80", router)
+		if srv.Host == "" {
+			srv.Host = ":80"
 		}
+		server := &http.Server{Addr: srv.Host, Handler: router}
+		log.Println("starting non-SSL, host:", srv.Host)
+		server.ListenAndServe()
 	}
 }
 
-/*
-func redirect(w http.ResponseWriter, r *http.Request) {
+func (srv *Server) Shutdown() {
+	certmagic.Shutdown()
+}
 
-		target := "https://" + r.Host + r.URL.Path
-		if len(r.URL.RawQuery) != 0 {
-			target += "?" + r.URL.RawQuery
-		}
-		log.Printf("redirect to: %s", target)
-		http.Redirect(w, r, target,
-			// see @andreiavrammsd comment: often 307 > 301
-			http.StatusPermanentRedirect)
-	}
-*/
 func serveTLS(host string, srv *http.Server) {
 	if host == "localhost" || host == "" {
 		log.Println(srv.ListenAndServeTLS(".certs/cert.pem", ".certs/key.pem"))
