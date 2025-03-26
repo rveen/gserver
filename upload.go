@@ -18,7 +18,7 @@ const (
 )
 
 func init() {
-//	os.MkdirAll(FileDir, 0644)
+	//	os.MkdirAll(FileDir, 0644)
 	os.MkdirAll(TmpDir, 0644)
 }
 
@@ -63,6 +63,7 @@ func fileUpload(r *http.Request, user string) (*ogdl.Graph, error) {
 
 			wfile, err = os.Create(folder + "/" + v.Filename)
 			if err != nil {
+				log.Println(err)
 				return nil, err
 			}
 			defer wfile.Close()
@@ -75,6 +76,7 @@ func fileUpload(r *http.Request, user string) (*ogdl.Graph, error) {
 					h.Write(buf[:n])
 				}
 				if err != nil {
+					log.Println(err)
 					break
 				}
 			}
