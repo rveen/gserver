@@ -17,11 +17,6 @@ const (
 	tmpDir  = ".tmp"
 )
 
-func init() {
-	//	os.MkdirAll(FileDir, 0644)
-	os.MkdirAll(TmpDir, 0644)
-}
-
 func CreateUploadDir() {
 	os.MkdirAll(tmpDir, 0644)
 }
