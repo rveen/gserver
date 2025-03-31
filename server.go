@@ -1,6 +1,7 @@
 package gserver
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"io/ioutil"
@@ -54,6 +55,7 @@ type Server struct {
 	DomainConfig   domainConfig
 	Templates      map[string]*ogdl.Graph
 	Multi          bool
+	server         *http.Server
 }
 
 // New prepares a Server{} structure initialized with
@@ -236,11 +238,16 @@ func (srv *Server) Serve(secure bool, timeout int, router fr.Router, email strin
 		}
 		server := &http.Server{Addr: srv.Host, Handler: router}
 		log.Println("starting non-SSL, host:", srv.Host)
+		srv.server = server
 		server.ListenAndServe()
 	}
 }
 
 func (srv *Server) Shutdown() {
+	log.Println("Shutting down server")
+	if srv.server != nil {
+		srv.server.Shutdown(context.Background())
+	}
 	certmagic.Shutdown()
 }
 
