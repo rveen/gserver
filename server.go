@@ -117,7 +117,7 @@ func New(host string) (*Server, error) {
 	srv.ContextService = nil
 
 	// Session manager
-	session.Global.Close()
+	// session.Global.Close()
 	srv.Sessions = session.NewCookieManagerOptions(session.NewInMemStore(), &session.CookieMngrOptions{AllowHTTP: true, CookieMaxAge: time.Hour * 24 * 90})
 	srv.MaxSessions = 10000
 
