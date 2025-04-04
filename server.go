@@ -216,6 +216,10 @@ func (srv *Server) Serve(secure bool, timeout int, router fr.Router, email strin
 	//
 	// HTTPS served with the aid of Let's Encrypt.
 
+	if timeout == 0 {
+		timeout = 30
+	}
+
 	if secure {
 
 		// read and agree to your CA's legal documents
@@ -236,7 +240,14 @@ func (srv *Server) Serve(secure bool, timeout int, router fr.Router, email strin
 		if srv.Host == "" {
 			srv.Host = ":80"
 		}
-		server := &http.Server{Addr: srv.Host, Handler: router}
+		server := &http.Server{
+			Addr:              srv.Host,
+			Handler:           router,
+			ReadTimeout:       time.Second * time.Duration(timeout),
+			WriteTimeout:      time.Second * time.Duration(timeout),
+			IdleTimeout:       30 * time.Second,
+			ReadHeaderTimeout: time.Second * time.Duration(timeout),
+		}
 		log.Println("starting non-SSL, host:", srv.Host)
 		srv.server = server
 		server.ListenAndServe()

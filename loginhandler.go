@@ -2,11 +2,12 @@ package gserver
 
 import (
 	"database/sql"
-	"github.com/go-ldap/ldap/v3"
+	"fmt"
 	"log"
 	"net/http"
 	uu "net/url"
-	"fmt"
+
+	"github.com/go-ldap/ldap/v3"
 
 	auth "github.com/abbot/go-http-auth"
 	_ "modernc.org/sqlite"
@@ -37,7 +38,7 @@ func (srv *Server) LoginAdapter(host bool, userdb string) func(http.Handler) htt
 				user := r.FormValue("User")
 				pass := r.FormValue("Password")
 
-				if !validateUser(user, pass, userdb,srv) {
+				if !validateUser(user, pass, userdb, srv) {
 					sess := srv.Sessions.Get(r)
 					if sess != nil {
 						srv.Sessions.Remove(sess, w)
@@ -78,7 +79,7 @@ func validateUser(user, pass, userdb string, srv *Server) bool {
 
 	case "htaccess":
 
-		secrets := auth.HtpasswdFileProvider(".conf/htpasswd")
+		secrets := auth.HtpasswdFileProvider("../htpasswd")
 		log.Println("htpasswd loaded")
 
 		if secrets != nil {
@@ -88,17 +89,10 @@ func validateUser(user, pass, userdb string, srv *Server) bool {
 
 	case "sqlite":
 
-		// Concurrent open is safe ??
-		db, err := sql.Open("sqlite", ".conf/users.db")
-		defer db.Close()
-
-		if err != nil {
-			return false
+		if srv.UserDb == nil {
+			srv.UserDb, _ = sql.Open("sqlite", "../users.db")
 		}
-		row := db.QueryRow("select name,passwd from contacts where email='" + user + "'")
-		var name, passwd string
-		row.Scan(&name, &passwd)
-		return passwd == pass
+		fallthrough
 
 	case "sql":
 
@@ -107,11 +101,11 @@ func validateUser(user, pass, userdb string, srv *Server) bool {
 			return false
 		}
 
-		row := srv.UserDb.QueryRow("select password from users where user='"+user+"'")
+		row := srv.UserDb.QueryRow("select password from users where user='" + user + "'")
 		var name, passwd string
 		row.Scan(&name, &passwd)
 		return passwd == pass
-		
+
 	case "ldap":
 
 		c := srv.Config.Get("ldap")
@@ -129,14 +123,14 @@ func validateUser(user, pass, userdb string, srv *Server) bool {
 
 		// Reconnect with TLS
 		/*
-		err = l.StartTLS(&tls.Config{InsecureSkipVerify: true})
-		if err != nil {
-			log.Println(err)
-			return false
-		}
+			err = l.StartTLS(&tls.Config{InsecureSkipVerify: true})
+			if err != nil {
+				log.Println(err)
+				return false
+			}
 		*/
 		// First bind with a read only user
-		err = l.Bind(buser,bpass)
+		err = l.Bind(buser, bpass)
 		if err != nil {
 			log.Println(err)
 			return false
