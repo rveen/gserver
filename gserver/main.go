@@ -41,7 +41,8 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"net/http/pprof"
+
+	//	"net/http/pprof"
 	"runtime"
 
 	"github.com/rveen/golib/fn"
@@ -105,13 +106,14 @@ func main() {
 	// Middleware chains
 	staticHandler := srv.StaticFileHandler(hosts, false, false)
 	dynamicHandler := alice.New(srv.LoginAdapter(hosts, userdb) /*, gserver.AccessAdapter("bla")*/).Then(srv.DynamicHandler(hosts))
+	fileHandler := gserver.FileHandler()
 
 	router := fr.RouterFunc(func(req *http.Request) http.Handler {
 		return fr.Chain(fr.New("/favicon.ico", staticHandler),
-			fr.New("/.well-known/*filepath", staticHandler), // Letsencript ACME
-			fr.New("/debug/pprof/*filepath", http.HandlerFunc(pprof.Index)),
-
-			fr.New("/static/*filepath" /*staticEmbedded*/, staticHandler),
+			// fr.New("/.well-known/*filepath", staticHandler), // Letsencript ACME
+			// fr.New("/debug/pprof/*filepath", http.HandlerFunc(pprof.Index)),
+			fr.New("/files/*filepath", fileHandler),
+			fr.New("/static/*filepath", staticHandler),
 			fr.New("/file/*filepath", staticHandler),
 			fr.New("/*filepath", dynamicHandler))
 	})
