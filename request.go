@@ -146,7 +146,7 @@ func (r *Request) Get() error {
 
 	var err error
 
-	log.Printf("URL.Path (0): %s\n", r.Path)
+	// log.Printf("URL.Path (0): %s\n", r.Path)
 
 	if r.HttpRequest.FormValue("m") == "raw" {
 		err = r.File.GetRaw(r.Path)
@@ -160,7 +160,7 @@ func (r *Request) Get() error {
 
 	// Set R.urlbase (for setting <base href="$R.urlbase"> allowing relative URLs)
 	base := r.HttpRequest.URL.Path
-	log.Printf("URL.Path: %s\n", base)
+	// log.Printf("URL.Path: %s\n", base)
 
 	if r.File.Type != "dir" && strings.HasPrefix(r.File.Path, r.File.Root) {
 		base = filepath.Dir(r.File.Path[len(r.File.Root):])
@@ -170,7 +170,7 @@ func (r *Request) Get() error {
 		base += "/"
 	}
 
-	log.Printf("URL.Path (3): %s\n", base)
+	// log.Printf("URL.Path (3): %s\n", base)
 
 	data := r.Context.Node("R")
 	data.Set("urlbase", base)
@@ -205,7 +205,7 @@ func (r *Request) Process(srv *Server) error {
 			r.File.Content = []byte(r.File.Document.Html())
 			fallthrough
 		case "dir", "data", "log":
-			log.Println("r.Process: ", r.File.Type)
+			// log.Println("r.Process: ", r.File.Type)
 
 			r.Context.Set("path.content", string(r.File.Content))
 			r.Context.Set("path.data", r.File.Data)
