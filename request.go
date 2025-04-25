@@ -202,6 +202,7 @@ func (r *Request) Process(srv *Server) error {
 		switch r.File.Type {
 
 		case "document", "document_dir":
+			r.File.Document.Context = r.Context
 			r.File.Content = []byte(r.File.Document.Html())
 			fallthrough
 		case "dir", "data", "log":
