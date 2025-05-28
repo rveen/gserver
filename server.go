@@ -58,10 +58,7 @@ type Server struct {
 	server         *http.Server
 }
 
-// New prepares a Server{} structure initialized with
-// configuration information and a base context that will be
-// the initial context of each request.
-func New(host string) (*Server, error) {
+func NewWithConfig(host string, config, context *ogdl.Graph) (*Server, error) {
 
 	srv := Server{}
 
@@ -74,17 +71,11 @@ func New(host string) (*Server, error) {
 	// Default host
 	srv.Host = host
 
-	// Server configuration file (optional)
-	srv.Config = ogdl.FromFile(".conf/config.ogdl")
-	if srv.Config == nil {
-		return nil, errors.New("missing .conf/config.ogdl file")
-	}
+	// Server configuration
+	srv.Config = config
 
-	// Base context for templates (optional)
-	srv.Context = ogdl.FromFile(".conf/context.ogdl")
-	if srv.Context == nil {
-		return nil, errors.New("missing .conf/context.ogdl file")
-	}
+	// Base context
+	srv.Context = context
 
 	// Preload templates
 	tpls := srv.Config.Get("templates")
@@ -122,6 +113,27 @@ func New(host string) (*Server, error) {
 	srv.MaxSessions = 10000
 
 	return &srv, nil
+
+}
+
+// New prepares a Server{} structure initialized with
+// configuration information and a base context that will be
+// the initial context of each request.
+func New(host string) (*Server, error) {
+
+	// Server configuration file (optional)
+	config := ogdl.FromFile(".conf/config.ogdl")
+	if config == nil {
+		return nil, errors.New("missing .conf/config.ogdl file")
+	}
+
+	// Base context for templates (optional)
+	context := ogdl.FromFile(".conf/context.ogdl")
+	if context == nil {
+		return nil, errors.New("missing .conf/context.ogdl file")
+	}
+
+	return NewWithConfig(host, config, context)
 }
 
 // New prepares a Server{} structure initialized with
