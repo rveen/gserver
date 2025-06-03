@@ -5,6 +5,7 @@ import (
 	"github.com/rveen/golib/files"
 	"github.com/rveen/golib/gosql"
 	"github.com/rveen/golib/html"
+	str "github.com/rveen/golib/strings"
 	"github.com/rveen/gserver"
 	"github.com/rveen/ogdl"
 
@@ -15,7 +16,6 @@ import (
 type ContextService struct{}
 
 // Load the context for template processing
-//
 func (c ContextService) GlobalContext(srv *gserver.Server) {
 	srv.Context.Set("T", template)
 	srv.Context.Set("DOC", doc)
@@ -28,6 +28,7 @@ func (c ContextService) GlobalContext(srv *gserver.Server) {
 	srv.Context.Set("files", &files.Files{})
 	srv.Context.Set("html", &html.Html{})
 	srv.Context.Set("sql", &gosql.Db{})
+	srv.Context.Set("strings", &str.Strings{})
 
 	for _, c := range srv.HostContexts {
 		c.Set("T", template)
@@ -41,6 +42,7 @@ func (c ContextService) GlobalContext(srv *gserver.Server) {
 		c.Set("files", &files.Files{})
 		c.Set("html", &html.Html{})
 		c.Set("sql", &gosql.Db{})
+		c.Set("strings", &str.Strings{})
 	}
 }
 

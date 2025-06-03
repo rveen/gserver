@@ -102,7 +102,7 @@ func getSession(r *http.Request, w http.ResponseWriter, host bool, srv *Server) 
 
 	data := context.Create("R")
 	ur := r.URL.Path
-	if u == "" {
+	if ur == "" {
 		ur = "/"
 	}
 	data.Set("url", ur)
