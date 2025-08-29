@@ -1,6 +1,7 @@
 package context
 
 import (
+	"github.com/rveen/electronics/isolation"
 	"github.com/rveen/golib/document"
 	"github.com/rveen/golib/files"
 	"github.com/rveen/golib/gosql"
@@ -29,6 +30,7 @@ func (c ContextService) GlobalContext(srv *gserver.Server) {
 	srv.Context.Set("html", &html.Html{})
 	srv.Context.Set("sql", &gosql.Db{})
 	srv.Context.Set("strings", &str.Strings{})
+	srv.Context.Set("isolation", &isolation.Isolation{})
 
 	for _, c := range srv.HostContexts {
 		c.Set("T", template)
@@ -43,6 +45,7 @@ func (c ContextService) GlobalContext(srv *gserver.Server) {
 		c.Set("html", &html.Html{})
 		c.Set("sql", &gosql.Db{})
 		c.Set("strings", &str.Strings{})
+		c.Set("isolation", &isolation.Isolation{})
 	}
 }
 
