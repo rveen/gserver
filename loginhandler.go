@@ -79,7 +79,8 @@ func validateUser(user, pass, userdb string, srv *Server) bool {
 
 	case "htaccess":
 
-		secrets := auth.HtpasswdFileProvider(".conf/htpasswd")
+		secrets := auth.HtpasswdFileProvider("../htpasswd")
+		// secrets := auth.HtpasswdFileProvider(".conf/htpasswd")
 		log.Println("htpasswd loaded")
 
 		if secrets != nil {
