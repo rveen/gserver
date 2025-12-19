@@ -81,7 +81,7 @@ func fileUpload(r *http.Request, user string) (*ogdl.Graph, error) {
 
 			fname := fileDir + "/" + hex.EncodeToString(h.Sum(nil)) + ext
 
-			log.Println("uploading file with MD5", hex.EncodeToString(h.Sum(nil)))
+			// log.Println("uploading file with MD5", hex.EncodeToString(h.Sum(nil)))
 			log.Println("moving to", fname)
 			err = os.Rename(tmpDir+"/"+v.Filename, fname)
 			if err != nil {
