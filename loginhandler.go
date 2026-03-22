@@ -1,7 +1,9 @@
 package gserver
 
 import (
+	"crypto/md5"
 	"database/sql"
+	"encoding/hex"
 	"fmt"
 	"log"
 	"net/http"
@@ -19,6 +21,8 @@ import (
 // Logout: removes the session
 // Other: do nothing
 func (srv *Server) LoginAdapter(host bool, userdb string) func(http.Handler) http.Handler {
+
+	log.Printf("LoginAdapter, userdb: %s\n", userdb)
 
 	mw := func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -38,7 +42,8 @@ func (srv *Server) LoginAdapter(host bool, userdb string) func(http.Handler) htt
 				user := r.FormValue("User")
 				pass := r.FormValue("Password")
 
-				if !validateUser(user, pass, userdb, srv) {
+				ok, acl := validateUser(user, pass, userdb, srv)
+				if !ok {
 					sess := srv.Sessions.Get(r)
 					if sess != nil {
 						srv.Sessions.Remove(sess, w)
@@ -52,6 +57,7 @@ func (srv *Server) LoginAdapter(host bool, userdb string) func(http.Handler) htt
 				r.Form["user"] = []string{user}
 				rq.User = user
 				rq.Context.Set("user", user)
+				rq.Context.Set("userACL", acl)
 				r.URL.User = uu.User(user)
 
 				// Set user cookie.
@@ -73,7 +79,17 @@ func (srv *Server) LoginAdapter(host bool, userdb string) func(http.Handler) htt
 	return mw
 }
 
-func validateUser(user, pass, userdb string, srv *Server) bool {
+func GetACL(user string, srv *Server) string {
+
+	row := srv.UserDb.QueryRow("select acl from users where user='" + user + "'")
+
+	var acl string
+	row.Scan(&acl)
+
+	return acl
+}
+
+func validateUser(user, pass, userdb string, srv *Server) (bool, string) {
 
 	switch userdb {
 
@@ -85,7 +101,7 @@ func validateUser(user, pass, userdb string, srv *Server) bool {
 
 		if secrets != nil {
 			pw := secrets(user, pass)
-			return auth.CheckSecret(pass, pw)
+			return auth.CheckSecret(pass, pw), ""
 		}
 
 	case "sqlite":
@@ -99,13 +115,21 @@ func validateUser(user, pass, userdb string, srv *Server) bool {
 
 		if srv.UserDb == nil {
 			log.Println("srv.UserDb is nil")
-			return false
+			return false, ""
 		}
 
-		row := srv.UserDb.QueryRow("select password from users where user='" + user + "'")
-		var name, passwd string
-		row.Scan(&name, &passwd)
-		return passwd == pass
+		row := srv.UserDb.QueryRow("select passwd,acl from users where user='" + user + "'")
+		var passwd, acl string
+		err := row.Scan(&passwd, &acl)
+
+		if err != nil {
+			log.Printf("validateUser error: %s\n", err.Error())
+		}
+
+		hash := md5.Sum([]byte(pass))
+		pass = hex.EncodeToString(hash[:])
+
+		return passwd == pass, acl
 
 	case "ldap":
 
@@ -118,7 +142,7 @@ func validateUser(user, pass, userdb string, srv *Server) bool {
 		l, err := ldap.Dial("tcp", host)
 		if err != nil {
 			log.Println(err)
-			return false
+			return false, ""
 		}
 		defer l.Close()
 
@@ -134,7 +158,7 @@ func validateUser(user, pass, userdb string, srv *Server) bool {
 		err = l.Bind(buser, bpass)
 		if err != nil {
 			log.Println(err)
-			return false
+			return false, ""
 		}
 
 		// Search for the given username
@@ -149,12 +173,12 @@ func validateUser(user, pass, userdb string, srv *Server) bool {
 		sr, err := l.Search(searchRequest)
 		if err != nil {
 			log.Println(err)
-			return false
+			return false, ""
 		}
 
 		if len(sr.Entries) != 1 {
 			log.Println(err)
-			return false
+			return false, ""
 		}
 
 		userdn := sr.Entries[0].DN
@@ -163,11 +187,11 @@ func validateUser(user, pass, userdb string, srv *Server) bool {
 		err = l.Bind(userdn, pass)
 		if err != nil {
 			log.Println(err)
-			return false
+			return false, ""
 		}
-		return true
+		return true, ""
 
 	}
 
-	return false
+	return false, ""
 }

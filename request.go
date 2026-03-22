@@ -96,7 +96,21 @@ func getSession(r *http.Request, w http.ResponseWriter, host bool, srv *Server) 
 		context.Set("user", srv.DefaultUser)
 	}
 
-	log.Printf("getSession: user is %s\n", context.Node("user").String())
+	// Set ACL. This can be done better (also set in LoginAdapter
+	// TODO move this to LoginAdapter (which is run anyway every request)
+	acl := ""
+	if user != "" && user != "nobody" {
+		acl = context.Get("userACL").String()
+		if acl == "" {
+			acl = GetACL(user, srv)
+			if acl == "" {
+				acl = "-"
+			}
+			context.Set("userACL", acl)
+		}
+	}
+
+	log.Printf("getSession: user is %s (acl %s)\n", context.Node("user").String(), acl)
 
 	// Add request specific parameters
 
