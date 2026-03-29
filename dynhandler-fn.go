@@ -42,8 +42,16 @@ func (srv *Server) DynamicHandlerFn(host bool, fs *fn.FNode) http.HandlerFunc {
 		err := r.Get()
 
 		if err != nil {
-			http.Error(w, http.StatusText(404), 404)
-			return
+
+			// Fallback to standard fylesystem
+			f := *srv.Root
+			r.File = &f
+			err = r.Get()
+
+			if err != nil {
+				http.Error(w, http.StatusText(404), 404)
+				return
+			}
 		}
 
 		r.Process(srv)

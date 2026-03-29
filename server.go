@@ -12,11 +12,13 @@ import (
 	"time"
 
 	fr "github.com/DATA-DOG/fastroute"
+
 	"github.com/rveen/golib/fn"
 	"github.com/rveen/ogdl"
 	rpc "github.com/rveen/ogdl/ogdlrf"
 	"github.com/rveen/session"
 
+	// TODO: remove certmagic dependence and HTTPS support (use front-end server)
 	"github.com/rveen/certmagic"
 	// A certmagic version with Shutdown() function!
 )

@@ -23,7 +23,7 @@ func (srv *Server) DynamicHandler(host bool) http.HandlerFunc {
 
 			} */
 
-		log.Println("DynHandlerFn", rh.URL.Path, rh.RemoteAddr)
+		log.Println("DynHandler", rh.URL.Path, rh.RemoteAddr)
 		t := time.Now().UnixMicro()
 
 		// Adapt the request to gserver.Request format.
