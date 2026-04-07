@@ -73,11 +73,13 @@ func getSession(r *http.Request, w http.ResponseWriter, host bool, srv *Server) 
 		srv.Sessions.Add(sess, w)
 
 		context = ogdl.New(nil)
+		srv.ContextMu.RLock()
 		if !host {
 			context.Copy(srv.Context)
 		} else {
 			context.Copy(srv.HostContexts[r.Host])
 		}
+		srv.ContextMu.RUnlock()
 		sess.SetAttr("context", context)
 
 	} else {

@@ -9,9 +9,11 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	fr "github.com/DATA-DOG/fastroute"
+	"github.com/fsnotify/fsnotify"
 
 	"github.com/rveen/golib/fn"
 	"github.com/rveen/ogdl"
@@ -57,6 +59,7 @@ type Server struct {
 	DomainConfig   domainConfig
 	Templates      map[string]*ogdl.Graph
 	Multi          bool
+	ContextMu      sync.RWMutex
 	server         *http.Server
 }
 
@@ -281,5 +284,50 @@ func serveTLS(host string, srv *http.Server) {
 		log.Println(srv.ListenAndServeTLS(".certs/cert.pem", ".certs/key.pem"))
 	} else {
 		log.Println(srv.ListenAndServeTLS("", ""))
+	}
+}
+
+// WatchContext watches the given context.ogdl file and reloads srv.Context
+// whenever the file is written or replaced. Intended to be run as a goroutine.
+func (srv *Server) WatchContext(path string) {
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		log.Println("fsnotify: cannot create watcher:", err)
+		return
+	}
+	defer watcher.Close()
+
+	if err := watcher.Add(path); err != nil {
+		log.Println("fsnotify: cannot watch", path, ":", err)
+		return
+	}
+	log.Println("watching", path)
+
+	for {
+		select {
+		case event, ok := <-watcher.Events:
+			if !ok {
+				return
+			}
+			if event.Has(fsnotify.Write) || event.Has(fsnotify.Create) {
+				newCtx := ogdl.FromFile(path)
+				if newCtx == nil {
+					log.Println("context reload failed: invalid file", path)
+					continue
+				}
+				srv.ContextMu.Lock()
+				srv.Context = newCtx
+				srv.ContextMu.Unlock()
+				if srv.ContextService != nil {
+					srv.ContextService.GlobalContext(srv)
+				}
+				log.Println("context reloaded from", path)
+			}
+		case err, ok := <-watcher.Errors:
+			if !ok {
+				return
+			}
+			log.Println("fsnotify error:", err)
+		}
 	}
 }

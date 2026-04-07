@@ -102,6 +102,7 @@ func main() {
 	// srv.Login = gserver.LoginService{}
 	srv.ContextService = context.ContextService{}
 	srv.ContextService.GlobalContext(srv)
+	go srv.WatchContext(".conf/context.ogdl")
 
 	// Middleware chains
 	staticHandler := srv.StaticFileHandler(hosts, false, false)
