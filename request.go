@@ -243,7 +243,8 @@ func (r *Request) Process(srv *Server) error {
 
 		default: // 'file'. Check if it is a template
 			if hasTplExtension(r.File.Path) {
-				tpl := ogdl.NewTemplate(string(r.File.Content))
+				// tpl := ogdl.NewTemplate(string(r.File.Content))
+				tpl := ogdl.NewTemplateFromBytes(r.File.Content)
 
 				r.Context.Set("mime", "")
 				r.File.Content = tpl.Process(r.Context)
