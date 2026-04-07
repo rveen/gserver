@@ -1,6 +1,7 @@
 package gserver
 
 import (
+	"bytes"
 	"log"
 	"net/http"
 	"path/filepath"
@@ -10,10 +11,7 @@ import (
 	"github.com/rveen/golib/fn"
 )
 
-// DynamicHandler ...
-//
-// NOTE See https://github.com/bpowers/seshcookie
-// TODO serve files with http.ServeContent (handles large files with Range requests)
+// DynamicHandlerFn ...
 func (srv *Server) DynamicHandlerFn(host bool, fs *fn.FNode) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, rh *http.Request) {
@@ -69,11 +67,10 @@ func (srv *Server) DynamicHandlerFn(host bool, fs *fn.FNode) http.HandlerFunc {
 			}
 		}
 
-		// Content-Length is set automatically in the Go http lib.
 		if len(r.File.Content) == 0 {
 			http.Error(w, "Empty content", 500)
 		} else {
-			w.Write(r.File.Content)
+			http.ServeContent(w, rh, filepath.Base(r.Path), time.Time{}, bytes.NewReader(r.File.Content))
 		}
 		log.Printf("DynHandlerFn END %d us\n", time.Now().UnixMicro()-t)
 	}
