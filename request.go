@@ -132,6 +132,9 @@ func getSession(r *http.Request, w http.ResponseWriter, host bool, srv *Server) 
 		var n *ogdl.Graph
 
 		for _, v := range vv {
+			
+			v = removeControlChars(v)
+			
 			if strings.HasSuffix(k, "._ogdl") {
 				k = k[0 : len(k)-6]
 				g := ogdl.FromString(v)
@@ -153,6 +156,29 @@ func getSession(r *http.Request, w http.ResponseWriter, host bool, srv *Server) 
 	}
 
 	return context
+}
+
+// Remove control characters except TAB and LN
+func removeControlChars(s string) string {
+	var b strings.Builder
+	b.Grow(len(s))
+
+	for _, r := range s {
+		// Keep TAB (0x09) and LF (0x0A)
+		if r == 0x09 || r == 0x0A {
+			b.WriteRune(r)
+			continue
+		}
+
+		// Filter control characters
+		if (r >= 0x00 && r <= 0x1F) || (r >= 0x7F && r <= 0x9F) {
+			continue
+		}
+
+		b.WriteRune(r)
+	}
+
+	return b.String()
 }
 
 // Get is a direct map from URL to file (binary content + params)

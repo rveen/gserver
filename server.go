@@ -113,12 +113,19 @@ func NewWithConfig(host string, config, context *ogdl.Graph) (*Server, error) {
 	srv.ContextService = nil
 
 	// Session manager
-	// session.Global.Close()
-	srv.Sessions = session.NewCookieManagerOptions(session.NewInMemStore(), &session.CookieMngrOptions{AllowHTTP: true, CookieMaxAge: time.Hour * 24 * 90})
-	srv.MaxSessions = 10000
+	srv.InitSessions()
 
 	return &srv, nil
 
+}
+
+func (srv *Server) InitSessions() {
+	// session.Global.Close()
+	if srv.Sessions!=nil {
+			srv.Sessions.Close()
+	}
+	srv.Sessions = session.NewCookieManagerOptions(session.NewInMemStore(), &session.CookieMngrOptions{AllowHTTP: true, CookieMaxAge: time.Hour * 24 * 90})
+	srv.MaxSessions = 10000
 }
 
 // New prepares a Server{} structure initialized with
@@ -221,8 +228,7 @@ func NewMulti() (*Server, error) {
 	srv.ContextService = nil
 
 	// Session manager
-	session.Global.Close()
-	srv.Sessions = session.NewCookieManagerOptions(session.NewInMemStore(), &session.CookieMngrOptions{AllowHTTP: true, CookieMaxAge: time.Hour * 24 * 90})
+	srv.InitSessions()
 
 	return &srv, nil
 }
@@ -317,6 +323,7 @@ func (srv *Server) WatchContext(path string) {
 				}
 				srv.ContextMu.Lock()
 				srv.Context = newCtx
+				srv.InitSessions()
 				srv.ContextMu.Unlock()
 				if srv.ContextService != nil {
 					srv.ContextService.GlobalContext(srv)
