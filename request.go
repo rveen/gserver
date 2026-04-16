@@ -132,9 +132,9 @@ func getSession(r *http.Request, w http.ResponseWriter, host bool, srv *Server) 
 		var n *ogdl.Graph
 
 		for _, v := range vv {
-			
+
 			v = removeControlChars(v)
-			
+
 			if strings.HasSuffix(k, "._ogdl") {
 				k = k[0 : len(k)-6]
 				g := ogdl.FromString(v)
@@ -315,6 +315,7 @@ func hasTplExtension(s string) bool {
 
 func UserCookie() *securecookie.Obj {
 
+	// TODO: make this configurable
 	key := []byte("f8hk39o9mx0dmrn1pa39jfla39djm3f0")
 	userCookie := securecookie.MustNew("userid", key, securecookie.Params{
 		Path:   "/",

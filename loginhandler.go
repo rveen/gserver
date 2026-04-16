@@ -81,6 +81,10 @@ func (srv *Server) LoginAdapter(host bool, userdb string) func(http.Handler) htt
 
 func GetACL(user string, srv *Server) string {
 
+	if srv.UserDb == nil {
+		return ""
+	}
+
 	row := srv.UserDb.QueryRow("select acl from users where user='" + user + "'")
 
 	var acl string
