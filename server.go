@@ -12,7 +12,6 @@ import (
 	"sync"
 	"time"
 
-	fr "github.com/DATA-DOG/fastroute"
 	"github.com/fsnotify/fsnotify"
 
 	"github.com/rveen/golib/fn"
@@ -233,7 +232,7 @@ func NewMulti() (*Server, error) {
 	return &srv, nil
 }
 
-func (srv *Server) Serve(secure bool, timeout int, router fr.Router, email string) {
+func (srv *Server) Serve(secure bool, timeout int, router http.Handler, email string) {
 	// Serve either HTTP or HTTPS.
 	// In case of HTTPS, all requests to HTTP are redirected.
 	//
