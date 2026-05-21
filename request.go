@@ -94,7 +94,7 @@ func getSession(r *http.Request, w http.ResponseWriter, host bool, srv *Server) 
 
 	// If there is no user set and there is an auto-login user defined:
 	u := context.Node("user").String()
-	if u == "" || u == "nobody" && srv.DefaultUser != "" {
+	if (u == "" || u == "nobody") && srv.DefaultUser != "" {
 		context.Set("user", srv.DefaultUser)
 	}
 
