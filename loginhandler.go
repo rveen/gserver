@@ -2,17 +2,12 @@ package gserver
 
 import (
 	"crypto/md5"
-	"database/sql"
 	"encoding/hex"
-	"fmt"
 	"log"
 	"net/http"
 	uu "net/url"
 
-	"github.com/go-ldap/ldap/v3"
-
 	auth "github.com/abbot/go-http-auth"
-	_ "modernc.org/sqlite"
 )
 
 // LoginAdapter handles "Login" and "Logout"
@@ -108,13 +103,6 @@ func validateUser(user, pass, userdb string, srv *Server) (bool, string) {
 			return auth.CheckSecret(pass, pw), ""
 		}
 
-	case "sqlite":
-
-		if srv.UserDb == nil {
-			srv.UserDb, _ = sql.Open("sqlite", "../users.db")
-		}
-		fallthrough
-
 	case "sql":
 
 		if srv.UserDb == nil {
@@ -134,66 +122,6 @@ func validateUser(user, pass, userdb string, srv *Server) (bool, string) {
 		pass = hex.EncodeToString(hash[:])
 
 		return passwd == pass, acl
-
-	case "ldap":
-
-		c := srv.Config.Get("ldap")
-		host := c.Node("server").String()
-		buser := c.Node("user").String()
-		bpass := c.Node("password").String()
-		dn := c.Node("basedn").String()
-
-		l, err := ldap.Dial("tcp", host)
-		if err != nil {
-			log.Println(err)
-			return false, ""
-		}
-		defer l.Close()
-
-		// Reconnect with TLS
-		/*
-			err = l.StartTLS(&tls.Config{InsecureSkipVerify: true})
-			if err != nil {
-				log.Println(err)
-				return false
-			}
-		*/
-		// First bind with a read only user
-		err = l.Bind(buser, bpass)
-		if err != nil {
-			log.Println(err)
-			return false, ""
-		}
-
-		// Search for the given username
-		searchRequest := ldap.NewSearchRequest(
-			dn,
-			ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
-			fmt.Sprintf("(&(objectClass=organizationalPerson)(uid=%s))", user),
-			[]string{"dn"},
-			nil,
-		)
-
-		sr, err := l.Search(searchRequest)
-		if err != nil {
-			log.Println(err)
-			return false, ""
-		}
-
-		if len(sr.Entries) != 1 {
-			log.Println(err)
-			return false, ""
-		}
-
-		userdn := sr.Entries[0].DN
-
-		// Bind as the user to verify their password
-		err = l.Bind(userdn, pass)
-		if err != nil {
-			log.Println(err)
-			return false, ""
-		}
-		return true, ""
 
 	}
 
