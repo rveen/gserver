@@ -45,6 +45,8 @@ func ConvertRequest(r *http.Request, w http.ResponseWriter, host bool, srv *Serv
 		rq.Path = r.URL.Path
 	}
 
+	rq.Path = filepath.Clean(rq.Path)
+
 	// load a pointer to a copy: do not touch srv.Root.
 	// Achtung!!: this doesn't work: rq.File = &(*srv.Root)
 	f := *srv.Root
