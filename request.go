@@ -57,89 +57,71 @@ func ConvertRequest(r *http.Request, w http.ResponseWriter, host bool, srv *Serv
 
 func getSession(r *http.Request, w http.ResponseWriter, host bool, srv *Server) *ogdl.Graph {
 
-	var context *ogdl.Graph
-
 	sess := srv.Sessions.Get(r)
 
-	// Get the context from the session, or create a new one
 	if sess == nil {
-
 		if srv.Sessions.Len() > srv.MaxSessions {
 			log.Println("max number of session reached:", srv.MaxSessions)
 			return nil
 		}
-
-		sess := session.NewSessionOptions(&session.SessOptions{Timeout: 30 * time.Minute})
-		// sess = session.NewSession()
+		sess = session.NewSessionOptions(&session.SessOptions{Timeout: 30 * time.Minute})
 		log.Println("session created. Total number:", srv.Sessions.Len())
 		srv.Sessions.Add(sess, w)
-
-		context = ogdl.New(nil)
-		srv.ContextMu.RLock()
-		if !host {
-			context.Copy(srv.Context)
-		} else {
-			context.Copy(srv.HostContexts[r.Host])
-		}
-		srv.ContextMu.RUnlock()
-		sess.SetAttr("context", context)
-
-	} else {
-		// Build a fresh per-request context from the server template so that
-		// concurrent requests sharing the same session never write to the same
-		// *ogdl.Graph (Graph has no internal mutex).
-		context = ogdl.New(nil)
-		srv.ContextMu.RLock()
-		if !host {
-			context.Copy(srv.Context)
-		} else {
-			context.Copy(srv.HostContexts[r.Host])
-		}
-		srv.ContextMu.RUnlock()
-		// Restore the two session-persistent scalars.
-		stored := sess.Attr("context").(*ogdl.Graph)
-		if u := stored.Node("user"); u != nil {
-			context.Set("user", u.String())
-		}
-		if cachedACL, ok := sess.Attr("userACL").(string); ok && cachedACL != "" {
-			context.Set("userACL", cachedACL)
-		}
 	}
 
-	// Iff the userCookie is set, the set 'user' to its value
+	// Build a per-request overlay: local nodes (user, userACL, R.*) shadow the
+	// shared read-only server context without copying it.
+	srv.ContextMu.RLock()
+	var parent *ogdl.Graph
+	if !host {
+		parent = srv.Context
+	} else {
+		parent = srv.HostContexts[r.Host]
+	}
+	srv.ContextMu.RUnlock()
+
+	sc := newSessionContext(parent)
+
+	// Restore session-persistent scalars
+	if u, ok := sess.Attr("user").(string); ok && u != "" {
+		sc.Set("user", u)
+	}
+	if a, ok := sess.Attr("userACL").(string); ok && a != "" {
+		sc.Set("userACL", a)
+	}
+
+	// Iff the userCookie is set, set 'user' to its value
 	user := UserCookieValue(r)
 	if user != "" && user != "-" {
-		context.Set("user", user)
+		sc.Set("user", user)
+		sess.SetAttr("user", user)
 	}
 
 	// If there is no user set and there is an auto-login user defined:
-	u := context.Node("user").String()
+	u := sc.Node("user").String()
 	if (u == "" || u == "nobody") && srv.DefaultUser != "" {
-		context.Set("user", srv.DefaultUser)
+		sc.Set("user", srv.DefaultUser)
 	}
 
 	// Set ACL. This can be done better (also set in LoginAdapter
 	// TODO move this to LoginAdapter (which is run anyway every request)
 	acl := ""
 	if user != "" && user != "nobody" {
-		acl = context.Get("userACL").String()
+		acl = sc.Get("userACL").String()
 		if acl == "" {
 			acl = GetACL(user, srv)
 			if acl == "" {
 				acl = "-"
 			}
-			context.Set("userACL", acl)
-			if sess != nil {
-				sess.SetAttr("userACL", acl)
-			}
+			sc.Set("userACL", acl)
+			sess.SetAttr("userACL", acl)
 		}
 	}
 
-	log.Printf("getSession: user is %s (acl %s)\n", context.Node("user").String(), acl)
+	log.Printf("getSession: user is %s (acl %s)\n", sc.Node("user").String(), acl)
 
 	// Add request specific parameters
-
-	data := context.Create("R")
+	data := sc.Create("R")
 	ur := r.URL.Path
 	if ur == "" {
 		ur = "/"
@@ -178,7 +160,7 @@ func getSession(r *http.Request, w http.ResponseWriter, host bool, srv *Server) 
 		}
 	}
 
-	return context
+	return sc.Graph()
 }
 
 // Remove control characters except TAB and LN
