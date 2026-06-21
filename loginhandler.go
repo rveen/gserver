@@ -8,6 +8,7 @@ import (
 	uu "net/url"
 
 	auth "github.com/abbot/go-http-auth"
+	"github.com/rveen/session2"
 )
 
 // LoginAdapter handles "Login" and "Logout"
@@ -25,9 +26,9 @@ func (srv *Server) LoginAdapter(host bool, userdb string) func(http.Handler) htt
 			userCookie := UserCookie()
 
 			if r.FormValue("Logout") != "" {
-				sess := srv.Sessions.Get(r)
+				sess := session2.Get(r)
 				if sess != nil {
-					srv.Sessions.Remove(sess, w)
+					session2.Remove(sess, w)
 				}
 				DeleteUserCookie(w)
 				http.Redirect(w, r, "/login", 302)
@@ -40,9 +41,9 @@ func (srv *Server) LoginAdapter(host bool, userdb string) func(http.Handler) htt
 
 				ok, acl := validateUser(user, pass, userdb, srv)
 				if !ok {
-					sess := srv.Sessions.Get(r)
+					sess := session2.Get(r)
 					if sess != nil {
-						srv.Sessions.Remove(sess, w)
+						session2.Remove(sess, w)
 					}
 					DeleteUserCookie(w)
 					http.Redirect(w, r, "/login?redirect="+r.URL.Path, 302)

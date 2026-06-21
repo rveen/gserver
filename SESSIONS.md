@@ -2,11 +2,20 @@
 
 ## Overview
 
-Sessions are managed by `github.com/rveen/session` using a secure cookie
-(`userid`) to identify the client. The session store is in-memory with a
-30-minute idle timeout. The maximum number of concurrent sessions is enforced
-by `srv.MaxSessions`; requests that would exceed this limit receive a nil
-context and are rejected.
+Sessions are managed by `github.com/rveen/session2` using a secure cookie
+(`sessid`) to identify the client. The session store is in-memory with a
+configurable idle timeout (default 30 minutes per session; the global manager
+is initialised with a 90-day cookie max-age). The maximum number of concurrent
+sessions is enforced by `srv.MaxSessions`; requests that would exceed this
+limit receive a nil context and are rejected.
+
+`session2` uses a **single process-wide global manager**. There is no
+`Server.Sessions` field; all session operations go through package-level
+functions (`session2.Get`, `session2.Add`, `session2.Remove`, `session2.Len`).
+This means every `Server` instance in the same process shares the same session
+store. Running multiple independent servers in one process is therefore not
+supported — each call to `Server.InitSessions()` calls `session2.Init()`
+which discards all active sessions and replaces the global manager.
 
 The entry point is `getSession` in `request.go`, called once per HTTP request
 from `ConvertRequest`. It returns a `*ogdl.Graph` that is stored in
@@ -65,8 +74,8 @@ implementation.
 ### getSession flow
 
 ```
-srv.Sessions.Get(r)
-  └─ nil → create new session, Add to store
+session2.Get(r)
+  └─ nil → create new session via session2.NewSession(...), Add to store
   └─ existing → restore "user" and "userACL" from session string attrs
 
 newSessionContext(parent)          // parent = srv.Context or host context

@@ -13,7 +13,7 @@ require (
 	github.com/rveen/electronics v0.0.0-20260105102148-dff2981f83b4
 	github.com/rveen/golib v0.0.0-20260421143343-6afd0812561a
 	github.com/rveen/ogdl v1.4.0
-	github.com/rveen/session v1.2.2
+	github.com/rveen/session2 v0.0.0
 	modernc.org/sqlite v1.50.1
 )
 

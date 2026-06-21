@@ -17,7 +17,7 @@ import (
 	"github.com/rveen/golib/fn"
 	"github.com/rveen/ogdl"
 	rpc "github.com/rveen/ogdl/ogdlrf"
-	"github.com/rveen/session"
+	"github.com/rveen/session2"
 
 	// TODO: remove certmagic dependence and HTTPS support (use front-end server)
 	"github.com/rveen/certmagic"
@@ -48,7 +48,6 @@ type Server struct {
 	Root           *fn.FNode
 	DocRoot        string
 	UploadDir      string
-	Sessions       session.Manager
 	DefaultUser    string
 	UserDb         *sql.DB
 	MaxSessions    int
@@ -119,11 +118,7 @@ func NewWithConfig(host string, config, context *ogdl.Graph) (*Server, error) {
 }
 
 func (srv *Server) InitSessions() {
-	// session.Global.Close()
-	if srv.Sessions!=nil {
-			srv.Sessions.Close()
-	}
-	srv.Sessions = session.NewCookieManagerOptions(session.NewInMemStore(), &session.CookieMngrOptions{AllowHTTP: true, CookieMaxAge: time.Hour * 24 * 90})
+	session2.Init(session2.Options{AllowHTTP: true, CookieMaxAge: time.Hour * 24 * 90})
 	srv.MaxSessions = 10000
 }
 

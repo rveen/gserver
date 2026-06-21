@@ -11,7 +11,7 @@ import (
 	"github.com/chmike/securecookie"
 	"github.com/rveen/golib/fn"
 	"github.com/rveen/ogdl"
-	"github.com/rveen/session"
+	"github.com/rveen/session2"
 )
 
 type Request struct {
@@ -57,16 +57,16 @@ func ConvertRequest(r *http.Request, w http.ResponseWriter, host bool, srv *Serv
 
 func getSession(r *http.Request, w http.ResponseWriter, host bool, srv *Server) *ogdl.Graph {
 
-	sess := srv.Sessions.Get(r)
+	sess := session2.Get(r)
 
 	if sess == nil {
-		if srv.Sessions.Len() > srv.MaxSessions {
+		if session2.Len() > srv.MaxSessions {
 			log.Println("max number of session reached:", srv.MaxSessions)
 			return nil
 		}
-		sess = session.NewSessionOptions(&session.SessOptions{Timeout: 30 * time.Minute})
-		log.Println("session created. Total number:", srv.Sessions.Len())
-		srv.Sessions.Add(sess, w)
+		sess = session2.NewSession(session2.SessOptions{Timeout: 30 * time.Minute})
+		log.Println("session created. Total number:", session2.Len())
+		session2.Add(sess, w)
 	}
 
 	// Build a per-request overlay: local nodes (user, userACL, R.*) shadow the
