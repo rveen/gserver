@@ -85,7 +85,25 @@ func getSession(r *http.Request, w http.ResponseWriter, host bool, srv *Server) 
 		sess.SetAttr("context", context)
 
 	} else {
-		context = sess.Attr("context").(*ogdl.Graph)
+		// Build a fresh per-request context from the server template so that
+		// concurrent requests sharing the same session never write to the same
+		// *ogdl.Graph (Graph has no internal mutex).
+		context = ogdl.New(nil)
+		srv.ContextMu.RLock()
+		if !host {
+			context.Copy(srv.Context)
+		} else {
+			context.Copy(srv.HostContexts[r.Host])
+		}
+		srv.ContextMu.RUnlock()
+		// Restore the two session-persistent scalars.
+		stored := sess.Attr("context").(*ogdl.Graph)
+		if u := stored.Node("user"); u != nil {
+			context.Set("user", u.String())
+		}
+		if cachedACL, ok := sess.Attr("userACL").(string); ok && cachedACL != "" {
+			context.Set("userACL", cachedACL)
+		}
 	}
 
 	// Iff the userCookie is set, the set 'user' to its value
@@ -111,6 +129,9 @@ func getSession(r *http.Request, w http.ResponseWriter, host bool, srv *Server) 
 				acl = "-"
 			}
 			context.Set("userACL", acl)
+			if sess != nil {
+				sess.SetAttr("userACL", acl)
+			}
 		}
 	}
 

@@ -28,9 +28,10 @@ func (srv *Server) LoginAdapter(host bool, userdb string) func(http.Handler) htt
 				sess := srv.Sessions.Get(r)
 				if sess != nil {
 					srv.Sessions.Remove(sess, w)
-
 				}
 				DeleteUserCookie(w)
+				http.Redirect(w, r, "/login", 302)
+				return
 
 			} else if r.FormValue("Login") != "" {
 
@@ -90,6 +91,8 @@ func GetACL(user string, srv *Server) string {
 
 func validateUser(user, pass, userdb string, srv *Server) (bool, string) {
 
+	log.Printf("user %s pass %s userdb %s\n", user, pass, userdb)
+
 	switch userdb {
 
 	case "htaccess":
@@ -114,12 +117,16 @@ func validateUser(user, pass, userdb string, srv *Server) (bool, string) {
 		var passwd, acl string
 		err := row.Scan(&passwd, &acl)
 
+		log.Printf("passwd %s acl %s err %v\n", passwd, acl, err)
+
 		if err != nil {
 			log.Printf("validateUser error: %s\n", err.Error())
 		}
 
 		hash := md5.Sum([]byte(pass))
 		pass = hex.EncodeToString(hash[:])
+
+		log.Printf("passwd %s <> pass %s\n", passwd, pass)
 
 		return passwd == pass, acl
 
