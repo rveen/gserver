@@ -1,16 +1,13 @@
-// Copyright 2017-2022, Rolf Veen.
+// Copyright 2017-2026, Rolf Veen.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
-
-// TODO See https://pace.dev/blog/2018/05/09/how-I-write-http-services-after-eight-years.html
 
 // Gserver is a web server.
 //
 // Summary of features
 //
-//   - Any path of the form /[user]/file/* is served as static (StaticHandler) and
-//     converted to /files/user/*
-//   - Any other path is handled by Handler as follows.
+//   - Any path of the form /file/* is served as static (StaticHandler)
+//   - Any other path is handled by DynHandler as follows.
 //   - Path elements of the form @rev are taken as revisions.
 //   - Path elements of the form _t (t != number) are taken as variables
 //   - Extensions of files are optional (if the file name is unique)
@@ -21,18 +18,9 @@
 //     repositories
 //   - The path can continue into data files and documents (markdown)
 //
-// # Authentication and sessions
-//
-// - htpasswd, SVN Auth, ACL
-//
-// # Templates
-//
 // # TODO
-//
 // - relative paths (for images, etc)
-//
 // - math notebook / wiki / forms
-//
 // - resumable file uploader
 package main
 
@@ -48,6 +36,16 @@ import (
 	"github.com/rveen/golib/fn"
 	"github.com/rveen/gserver"
 	"github.com/rveen/gserver/context"
+
+	// Context dependencies: each blank import self-registers a named object
+	// into the template context via ctxreg. Add or remove a dependency by
+	// editing this list only — context.go and the gserver package stay untouched.
+	_ "github.com/rveen/gserver/context/plugins/etoolsctx"
+	_ "github.com/rveen/gserver/context/plugins/filesctx"
+	_ "github.com/rveen/gserver/context/plugins/gosqlctx"
+	_ "github.com/rveen/gserver/context/plugins/htmlctx"
+	_ "github.com/rveen/gserver/context/plugins/isolationctx"
+	_ "github.com/rveen/gserver/context/plugins/stringsctx"
 
 	fr "github.com/DATA-DOG/fastroute"
 	"github.com/justinas/alice"
