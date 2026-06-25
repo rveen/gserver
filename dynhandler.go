@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/rveen/golib/fn/httphook"
 	"github.com/rveen/ogdl"
 )
 
@@ -44,6 +45,17 @@ func (srv *Server) DynamicHandler(host bool) http.HandlerFunc {
 		if (user == "" || user == "nobody") && !checkPath(r.Path, srv.Config) {
 			http.Redirect(w, rh, "/login?redirect="+rh.URL.Path, 302)
 			return
+		}
+
+		// Optional request interceptors (registered via golib/fn/httphook by
+		// blank-imported adapter packages in main.go, e.g. Altium->KiCad
+		// conversion). Run before normal file resolution; the first one to
+		// handle the request ends processing.
+		for _, h := range httphook.All() {
+			if h(srv.Root, w, rh, r.Path) {
+				log.Printf("DynHandler END (interceptor) %d us\n", time.Now().UnixMicro()-t)
+				return
+			}
 		}
 
 		// Get the file (or dir) corresponding to the path

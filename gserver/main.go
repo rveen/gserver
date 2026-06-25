@@ -47,6 +47,11 @@ import (
 	_ "github.com/rveen/gserver/context/plugins/isolationctx"
 	_ "github.com/rveen/gserver/context/plugins/stringsctx"
 
+	// Optional request interceptors: each blank import self-registers an HTTP
+	// interceptor (golib/fn/httphook) run before normal file resolution. Remove
+	// the line to drop the dependency entirely.
+	_ "github.com/rveen/golib/formats/altium/plugin"
+
 	fr "github.com/DATA-DOG/fastroute"
 	"github.com/justinas/alice"
 )

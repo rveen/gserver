@@ -39,7 +39,9 @@ func (srv *Server) LoginAdapter(host bool, userdb string) func(http.Handler) htt
 				user := r.FormValue("User")
 				pass := r.FormValue("Password")
 
-				ok, acl := validateUser(user, pass, userdb, srv)
+				// acl is recomputed in getSession() on the next request via
+				// the userid cookie, so it is not needed here.
+				ok, _ := validateUser(user, pass, userdb, srv)
 				if !ok {
 					sess := session2.Get(r)
 					if sess != nil {
@@ -50,23 +52,47 @@ func (srv *Server) LoginAdapter(host bool, userdb string) func(http.Handler) htt
 					return
 				}
 
-				rq := ConvertRequest(r, w, host, srv)
 				r.Form["user"] = []string{user}
-				rq.User = user
-				rq.Context.Set("user", user)
-				rq.Context.Set("userACL", acl)
 				r.URL.User = uu.User(user)
 
 				// Set user cookie.
 				// This is the way to communicate the user to the request.
 				// In request.Convert() the session's 'user' is set to
 				// the value of this cookie.
-
 				userCookie.SetValue(w, []byte(user))
 
-				if rdir := r.FormValue("redirect"); rdir != "" {
-					http.Redirect(w, r, rdir, 302)
-					return
+				// Always redirect after a successful login. The userid cookie
+				// was only set on the response, so it is not visible on the
+				// current request; rendering in-place here would show the user
+				// as logged out and force a second login click. Redirecting
+				// makes the browser re-request with the cookie present.
+				//
+				// The redirect target may come straight from the submitted
+				// form, or (if the login form did not echo it) from the value
+				// stashed in the session when the login page was served.
+				rdir := r.FormValue("redirect")
+				if rdir == "" {
+					if sess := session2.Get(r); sess != nil {
+						if s, ok := sess.Attr("redirect").(string); ok && s != "" {
+							rdir = s
+							sess.SetAttr("redirect", "")
+						}
+					}
+				}
+				if rdir == "" {
+					rdir = "/"
+				}
+				http.Redirect(w, r, rdir, http.StatusSeeOther)
+				return
+			}
+
+			// Not a login/logout submit. If a redirect target is supplied
+			// (e.g. the login page was requested as /login?redirect=/foo),
+			// remember it in the session so it survives a login form that
+			// does not carry the 'redirect' parameter through to the POST.
+			if rdir := r.FormValue("redirect"); rdir != "" {
+				if sess := session2.Get(r); sess != nil {
+					sess.SetAttr("redirect", rdir)
 				}
 			}
 
