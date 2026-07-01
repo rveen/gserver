@@ -23,8 +23,6 @@ func (srv *Server) StaticFileHandlerFn(host bool, fs *fn.FNode) http.HandlerFunc
 			path = r.Host + "/" + path
 		}
 
-		log.Println("StaticHandler-fn", path, r.RemoteAddr)
-
 		// Get the file. Make a copy of the struct!
 		fd := *fs
 		file := &fd
@@ -53,6 +51,7 @@ func (srv *Server) StaticFileHandlerFn(host bool, fs *fn.FNode) http.HandlerFunc
 			w.Header().Set("Content-Type", mime.TypeByExtension(ext))
 			w.Header().Set("Cache-Control", "public, max-age=36000")
 			http.ServeContent(w, r, filepath.Base(file.Path), stat.ModTime(), f)
+			log.Printf("StaticHandlerFn #0 %s %s\n", path, r.RemoteAddr)
 			return
 		}
 
@@ -69,6 +68,6 @@ func (srv *Server) StaticFileHandlerFn(host bool, fs *fn.FNode) http.HandlerFunc
 		w.Header().Set("Content-Type", mime.TypeByExtension(ext))
 		w.Header().Set("Cache-Control", "public, max-age=36000")
 		w.Write(file.Content)
-		// log.Println("StaticHandler-fn END", path)
+		log.Printf("StaticHandlerFn #0 %s %s\n", path, r.RemoteAddr)
 	}
 }

@@ -10,6 +10,7 @@ import (
 
 	"github.com/rveen/golib/fn/httphook"
 	"github.com/rveen/ogdl"
+	"github.com/rveen/session2"
 )
 
 // DynamicHandler ...
@@ -17,12 +18,6 @@ func (srv *Server) DynamicHandler(host bool) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, rh *http.Request) {
 
-		/*
-			if rh.FormValue("UploadFiles") != "" {
-
-			} */
-
-		log.Println("DynHandler", rh.URL.Path, rh.RemoteAddr)
 		t := time.Now().UnixMicro()
 
 		// Adapt the request to gserver.Request format.
@@ -86,7 +81,8 @@ func (srv *Server) DynamicHandler(host bool) http.HandlerFunc {
 		} else {
 			http.ServeContent(w, rh, filepath.Base(r.Path), time.Time{}, bytes.NewReader(r.File.Content))
 		}
-		log.Printf("DynHandler END %d us\n", time.Now().UnixMicro()-t)
+		log.Printf("DynHandlerFn #%d %s %s %dus %s\n", session2.Len(), rh.URL.Path, rh.RemoteAddr, time.Now().UnixMicro()-t, r.Context.Node("user").String())
+
 	}
 }
 

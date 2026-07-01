@@ -24,8 +24,6 @@ func (srv *Server) StaticFileHandler(host, userspace, protect bool) http.Handler
 			path = r.Host + "/" + path
 		}
 
-		log.Println("StaticHandler", path, r.RemoteAddr)
-
 		// Check that a valid user has been set
 		if protect {
 			u := UserCookieValue(r)
@@ -63,6 +61,7 @@ func (srv *Server) StaticFileHandler(host, userspace, protect bool) http.Handler
 			w.Header().Set("Content-Type", mime.TypeByExtension(ext))
 			w.Header().Set("Cache-Control", "public, max-age=7200")
 			http.ServeContent(w, r, filepath.Base(file.Path), stat.ModTime(), f)
+			log.Printf("StaticHandler #0 %s %s %t\n", path, r.RemoteAddr, protect)
 			return
 		}
 
@@ -79,6 +78,6 @@ func (srv *Server) StaticFileHandler(host, userspace, protect bool) http.Handler
 		w.Header().Set("Content-Type", mime.TypeByExtension(ext))
 		w.Header().Set("Cache-Control", "public, max-age=7200")
 		w.Write(file.Content)
-		// log.Println("StaticHandler END", path)
+		log.Printf("StaticHandler #0 %s %s %t\n", path, r.RemoteAddr, protect)
 	}
 }

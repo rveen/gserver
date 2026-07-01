@@ -22,7 +22,7 @@ type Request struct {
 	Path        string
 	File        *fn.FNode
 	Mime        string
-	// Session
+	Session     *session2.Session
 }
 
 var TplExtensions []string = []string{".htm", ".txt", ".csv", ".json", ".g", ".ogdl", ".xml", ".xlsx", ".svg", ".ics"}
@@ -31,12 +31,15 @@ func ConvertRequest(r *http.Request, w http.ResponseWriter, host bool, srv *Serv
 
 	rq := &Request{HttpRequest: r}
 
-	rq.Context = getSession(r, w, host, srv)
+	var s *session2.Session
+
+	rq.Context, s = getSession(r, w, host, srv)
 	if rq.Context == nil {
 		// Could not create a new session
 		return nil
 	}
 	rq.User = rq.Context.Get("user").String()
+	rq.Session = s
 
 	// Add host name in case of multihost
 	if host {
@@ -55,17 +58,16 @@ func ConvertRequest(r *http.Request, w http.ResponseWriter, host bool, srv *Serv
 	return rq
 }
 
-func getSession(r *http.Request, w http.ResponseWriter, host bool, srv *Server) *ogdl.Graph {
+func getSession(r *http.Request, w http.ResponseWriter, host bool, srv *Server) (*ogdl.Graph, *session2.Session) {
 
 	sess := session2.Get(r)
 
 	if sess == nil {
 		if session2.Len() > srv.MaxSessions {
 			log.Println("max number of session reached:", srv.MaxSessions)
-			return nil
+			return nil, nil
 		}
 		sess = session2.NewSession(session2.SessOptions{Timeout: 30 * time.Minute})
-		log.Println("session created. Total number:", session2.Len())
 		session2.Add(sess, w)
 	}
 
@@ -97,6 +99,19 @@ func getSession(r *http.Request, w http.ResponseWriter, host bool, srv *Server) 
 		sess.SetAttr("user", user)
 	}
 
+	// An externally-resolved identity (bearer token / trusted header) injected
+	// by an upstream Authenticate middleware takes precedence over the session
+	// cookie. See authbridge.go.
+	if iu := userFromContext(r.Context()); iu != nil && iu.UID != "" {
+		user = iu.UID
+		sc.Set("user", user)
+		sess.SetAttr("user", user)
+		if iu.ACL != "" {
+			sc.Set("userACL", iu.ACL)
+			sess.SetAttr("userACL", iu.ACL)
+		}
+	}
+
 	// If there is no user set and there is an auto-login user defined:
 	u := sc.Node("user").String()
 	if (u == "" || u == "nobody") && srv.DefaultUser != "" {
@@ -117,8 +132,6 @@ func getSession(r *http.Request, w http.ResponseWriter, host bool, srv *Server) 
 			sess.SetAttr("userACL", acl)
 		}
 	}
-
-	log.Printf("getSession: user is %s (acl %s)\n", sc.Node("user").String(), acl)
 
 	// Add request specific parameters
 	data := sc.Create("R")
@@ -160,7 +173,7 @@ func getSession(r *http.Request, w http.ResponseWriter, host bool, srv *Server) 
 		}
 	}
 
-	return sc.Graph()
+	return sc.Graph(), sess
 }
 
 // Remove control characters except TAB and LN
@@ -320,9 +333,8 @@ func hasTplExtension(s string) bool {
 
 func UserCookie() *securecookie.Obj {
 
-	// TODO: make this configurable
-	key := []byte("f8hk39o9mx0dmrn1pa39jfla39djm3f0")
-	userCookie := securecookie.MustNew("userid", key, securecookie.Params{
+	// Key is configurable via SetUserCookieKey (see authbridge.go).
+	userCookie := securecookie.MustNew("userid", userCookieKey, securecookie.Params{
 		Path:   "/",
 		MaxAge: 0,
 		Secure: false, // cookie received with HTTP for testing purpose

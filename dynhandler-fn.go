@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/rveen/golib/fn"
+	"github.com/rveen/session2"
 )
 
 // DynamicHandlerFn ...
@@ -16,7 +17,6 @@ func (srv *Server) DynamicHandlerFn(host bool, fs *fn.FNode) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, rh *http.Request) {
 
-		log.Println("DynHandlerFn", rh.URL.Path, rh.RemoteAddr)
 		t := time.Now().UnixMicro()
 
 		// Adapt the request to gserver.Request format.
@@ -72,6 +72,6 @@ func (srv *Server) DynamicHandlerFn(host bool, fs *fn.FNode) http.HandlerFunc {
 		} else {
 			http.ServeContent(w, rh, filepath.Base(r.Path), time.Time{}, bytes.NewReader(r.File.Content))
 		}
-		log.Printf("DynHandlerFn END %d us\n", time.Now().UnixMicro()-t)
+		log.Printf("DynHandlerFn #%d %s %s %dus %s\n", session2.Len(), rh.URL.Path, rh.RemoteAddr, time.Now().UnixMicro()-t, r.Context.Node("user").String())
 	}
 }
