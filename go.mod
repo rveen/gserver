@@ -7,34 +7,27 @@ require (
 	github.com/abbot/go-http-auth v0.4.1-0.20230310155302-b2a0e3997b9a
 	github.com/chmike/securecookie v1.3.5
 	github.com/fsnotify/fsnotify v1.10.1
-	github.com/go-ldap/ldap/v3 v3.4.13
 	github.com/justinas/alice v1.2.0
 	github.com/rveen/certmagic v0.0.0-20250402171459-dbe624f78cbc
 	github.com/rveen/electronics v0.0.0-20260105102148-dff2981f83b4
-	github.com/rveen/golib v0.0.0-20260421143343-6afd0812561a
+	github.com/rveen/golib v0.0.0-20260701155231-fe58c1a86a2d
 	github.com/rveen/ogdl v1.4.0
 	github.com/rveen/session2 v1.1.0
-	modernc.org/sqlite v1.50.1
 )
 
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect
-	github.com/Azure/go-ntlmssp v0.1.0 // indirect
 	github.com/caddyserver/zerossl v0.1.3 // indirect
 	github.com/denisenkom/go-mssqldb v0.12.3 // indirect
-	github.com/dustin/go-humanize v1.0.1 // indirect
-	github.com/go-asn1-ber/asn1-ber v1.5.8-0.20250403174932-29230038a667 // indirect
 	github.com/go-sql-driver/mysql v1.9.1 // indirect
 	github.com/golang-sql/civil v0.0.0-20190719163853-cb61b32ac6fe // indirect
 	github.com/golang-sql/sqlexp v0.1.0 // indirect
-	github.com/google/uuid v1.6.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.10 // indirect
 	github.com/libdns/libdns v0.2.3 // indirect
-	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mholt/acmez/v3 v3.1.1 // indirect
 	github.com/miekg/dns v1.1.64 // indirect
-	github.com/ncruces/go-strftime v1.0.0 // indirect
-	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
+	github.com/richardlehane/mscfb v1.0.7 // indirect
+	github.com/richardlehane/msoleps v1.0.3 // indirect
 	github.com/rveen/margaid v0.0.0-20260526073250-2471c92c43ba // indirect
 	github.com/zeebo/blake3 v0.2.4 // indirect
 	go.uber.org/multierr v1.10.0 // indirect
@@ -47,7 +40,4 @@ require (
 	golang.org/x/sys v0.42.0 // indirect
 	golang.org/x/text v0.34.0 // indirect
 	golang.org/x/tools v0.42.0 // indirect
-	modernc.org/libc v1.72.3 // indirect
-	modernc.org/mathutil v1.7.1 // indirect
-	modernc.org/memory v1.11.0 // indirect
 )
