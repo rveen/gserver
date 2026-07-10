@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -51,6 +50,7 @@ type Server struct {
 	DefaultUser    string
 	UserDb         *sql.DB
 	MaxSessions    int
+	SessionTimeout time.Duration
 	Plugins        []string
 	Login          login
 	ContextService contextService
@@ -120,6 +120,7 @@ func NewWithConfig(host string, config, context *ogdl.Graph) (*Server, error) {
 func (srv *Server) InitSessions() {
 	session2.Init(session2.Options{AllowHTTP: true, CookieMaxAge: time.Hour * 24 * 90})
 	srv.MaxSessions = 10000
+	srv.SessionTimeout = 30 * time.Minute
 }
 
 // New prepares a Server{} structure initialized with
@@ -169,7 +170,7 @@ func NewMulti() (*Server, error) {
 
 	// Base context for templates
 	// Each host gets its own
-	files, _ := ioutil.ReadDir(".")
+	files, _ := os.ReadDir(".")
 	srv.HostContexts = make(map[string]*ogdl.Graph)
 
 	for _, f := range files {
@@ -277,14 +278,6 @@ func (srv *Server) Shutdown() {
 		srv.server.Shutdown(context.Background())
 	}
 	certmagic.Shutdown()
-}
-
-func serveTLS(host string, srv *http.Server) {
-	if host == "localhost" || host == "" {
-		log.Println(srv.ListenAndServeTLS(".certs/cert.pem", ".certs/key.pem"))
-	} else {
-		log.Println(srv.ListenAndServeTLS("", ""))
-	}
 }
 
 // WatchContext watches the given context.ogdl file and reloads srv.Context

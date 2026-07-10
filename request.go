@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/chmike/securecookie"
 	"github.com/rveen/golib/fn"
@@ -67,7 +66,7 @@ func getSession(r *http.Request, w http.ResponseWriter, host bool, srv *Server) 
 			log.Println("max number of session reached:", srv.MaxSessions)
 			return nil, nil
 		}
-		sess = session2.NewSession(session2.SessOptions{Timeout: 30 * time.Minute})
+		sess = session2.NewSession(session2.SessOptions{Timeout: srv.SessionTimeout})
 		session2.Add(sess, w)
 	}
 

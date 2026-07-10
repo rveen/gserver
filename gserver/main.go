@@ -26,9 +26,10 @@ package main
 
 import (
 	"flag"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
+	"time"
 
 	//	"net/http/pprof"
 	"runtime"
@@ -102,6 +103,10 @@ func main() {
 		return
 	}
 
+	if sessionTimeout > 0 {
+		srv.SessionTimeout = time.Duration(sessionTimeout) * time.Minute
+	}
+
 	// srv.Login = gserver.LoginService{}
 	srv.ContextService = context.ContextService{}
 	srv.ContextService.GlobalContext(srv)
@@ -126,7 +131,7 @@ func main() {
 
 	if logging == false {
 		println("further logging disabled!")
-		log.SetOutput(ioutil.Discard)
+		log.SetOutput(io.Discard)
 	}
 
 	// Overwrite the original file handler with this one
