@@ -63,7 +63,7 @@ func main() {
 
 	var logging, verbose, hosts bool
 	var host, secureHost, userdb, email string
-	var timeout, sessionTimeout int
+	var timeout, sessionTimeout, maxSessions int
 
 	// flag.BoolVar(&logging, "static", false, "serve all files static") --> disables extension discovery
 
@@ -74,6 +74,7 @@ func main() {
 	flag.StringVar(&secureHost, "S", "", "set secure_host:port")
 	flag.IntVar(&timeout, "t", 10, "set http(s) timeout (seconds)")
 	flag.IntVar(&sessionTimeout, "ts", 30, "set session timeout (minutes)")
+	flag.IntVar(&maxSessions, "ms", 0, "max concurrent logged-in sessions (0 = leave default)")
 	flag.StringVar(&userdb, "userdb", "htaccess", "user db: sqlite or htaccess (default)")
 	flag.StringVar(&email, "email", "", "email for Let's Encrypt SSL")
 
@@ -105,6 +106,10 @@ func main() {
 
 	if sessionTimeout > 0 {
 		srv.SessionTimeout = time.Duration(sessionTimeout) * time.Minute
+	}
+
+	if maxSessions > 0 {
+		srv.SetMaxSessions(maxSessions)
 	}
 
 	// srv.Login = gserver.LoginService{}

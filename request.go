@@ -21,7 +21,9 @@ type Request struct {
 	Path        string
 	File        *fn.FNode
 	Mime        string
-	Session     *session2.Session
+	// Session is nil for anonymous requests: a session is only stored once a
+	// user authenticates.
+	Session *session2.Session
 }
 
 var TplExtensions []string = []string{".htm", ".txt", ".csv", ".json", ".g", ".ogdl", ".xml", ".xlsx", ".svg", ".ics"}
@@ -59,16 +61,10 @@ func ConvertRequest(r *http.Request, w http.ResponseWriter, host bool, srv *Serv
 
 func getSession(r *http.Request, w http.ResponseWriter, host bool, srv *Server) (*ogdl.Graph, *session2.Session) {
 
+	// May be nil, and that is the normal case: anonymous requests get no stored
+	// session. One is created lazily below, only once an authenticated user is
+	// known. See ensure().
 	sess := session2.Get(r)
-
-	if sess == nil {
-		if session2.Len() > srv.MaxSessions {
-			log.Println("max number of session reached:", srv.MaxSessions)
-			return nil, nil
-		}
-		sess = session2.NewSession(session2.SessOptions{Timeout: srv.SessionTimeout})
-		session2.Add(sess, w)
-	}
 
 	// Build a per-request overlay: local nodes (user, userACL, R.*) shadow the
 	// shared read-only server context without copying it.
@@ -81,21 +77,40 @@ func getSession(r *http.Request, w http.ResponseWriter, host bool, srv *Server) 
 	}
 	srv.ContextMu.RUnlock()
 
+	if parent == nil {
+		// Multihost with an unknown Host header: there is no context to overlay.
+		log.Println("no context for host:", r.Host)
+		return nil, nil
+	}
+
 	sc := newSessionContext(parent)
 
-	// Restore session-persistent scalars
-	if u, ok := sess.Attr("user").(string); ok && u != "" {
-		sc.Set("user", u)
+	// ensure returns the stored session, creating and registering it on first
+	// use. Only ever called once an authenticated user is known, so that an
+	// anonymous flood cannot fill the session table.
+	ensure := func() *session2.Session {
+		if sess == nil {
+			sess = session2.NewSession(session2.SessOptions{Timeout: srv.SessionTimeout})
+			session2.Add(sess, w)
+		}
+		return sess
 	}
-	if a, ok := sess.Attr("userACL").(string); ok && a != "" {
-		sc.Set("userACL", a)
+
+	// Restore session-persistent scalars
+	if sess != nil {
+		if u, ok := sess.Attr("user").(string); ok && u != "" {
+			sc.Set("user", u)
+		}
+		if a, ok := sess.Attr("userACL").(string); ok && a != "" {
+			sc.Set("userACL", a)
+		}
 	}
 
 	// Iff the userCookie is set, set 'user' to its value
 	user := UserCookieValue(r)
 	if user != "" && user != "-" {
 		sc.Set("user", user)
-		sess.SetAttr("user", user)
+		ensure().SetAttr("user", user)
 	}
 
 	// An externally-resolved identity (bearer token / trusted header) injected
@@ -104,14 +119,16 @@ func getSession(r *http.Request, w http.ResponseWriter, host bool, srv *Server) 
 	if iu := userFromContext(r.Context()); iu != nil && iu.UID != "" {
 		user = iu.UID
 		sc.Set("user", user)
-		sess.SetAttr("user", user)
+		ensure().SetAttr("user", user)
 		if iu.ACL != "" {
 			sc.Set("userACL", iu.ACL)
-			sess.SetAttr("userACL", iu.ACL)
+			ensure().SetAttr("userACL", iu.ACL)
 		}
 	}
 
-	// If there is no user set and there is an auto-login user defined:
+	// If there is no user set and there is an auto-login user defined.
+	// Deliberately does not touch `user` below, so an auto-login deployment
+	// still allocates no session for anonymous traffic.
 	u := sc.Node("user").String()
 	if (u == "" || u == "nobody") && srv.DefaultUser != "" {
 		sc.Set("user", srv.DefaultUser)
@@ -128,7 +145,7 @@ func getSession(r *http.Request, w http.ResponseWriter, host bool, srv *Server) 
 				acl = "-"
 			}
 			sc.Set("userACL", acl)
-			sess.SetAttr("userACL", acl)
+			ensure().SetAttr("userACL", acl)
 		}
 	}
 
@@ -363,4 +380,53 @@ func DeleteUserCookie(w http.ResponseWriter) {
 	}
 
 	http.SetCookie(w, c)
+}
+
+// RedirectCookie holds the post-login destination across the login form POST.
+// It is a signed cookie rather than a session attribute because /login is
+// reached anonymously, and stashing it server-side would let any unauthenticated
+// client fill the session table.
+func RedirectCookie() *securecookie.Obj {
+
+	return securecookie.MustNew("redirect", userCookieKey, securecookie.Params{
+		Path:     "/",
+		MaxAge:   600,
+		HTTPOnly: true,
+		Secure:   false, // cookie received with HTTP for testing purpose
+	})
+}
+
+func SetRedirectCookie(w http.ResponseWriter, path string) {
+	RedirectCookie().SetValue(w, []byte(path)) //nolint:errcheck
+}
+
+func RedirectCookieValue(r *http.Request) string {
+
+	b, err := RedirectCookie().GetValue(nil, r)
+	if err != nil {
+		return ""
+	}
+	return string(b)
+}
+
+func DeleteRedirectCookie(w http.ResponseWriter) {
+
+	c := &http.Cookie{
+		Name:     "redirect",
+		Value:    "",
+		Path:     "/",
+		MaxAge:   -1,
+		HttpOnly: true,
+	}
+
+	http.SetCookie(w, c)
+}
+
+// safeRedirect confines a post-login redirect to this host. A bare "//host"
+// or an absolute URL would otherwise send the user off-site.
+func safeRedirect(p string) string {
+	if strings.HasPrefix(p, "/") && !strings.HasPrefix(p, "//") {
+		return p
+	}
+	return "/"
 }

@@ -117,10 +117,24 @@ func NewWithConfig(host string, config, context *ogdl.Graph) (*Server, error) {
 
 }
 
+// InitSessions installs the global session manager. It discards every stored
+// session, so it must only be called at startup.
 func (srv *Server) InitSessions() {
-	session2.Init(session2.Options{AllowHTTP: true, CookieMaxAge: time.Hour * 24 * 90})
-	srv.MaxSessions = 10000
+	srv.MaxSessions = 100000
 	srv.SessionTimeout = 30 * time.Minute
+	session2.Init(session2.Options{
+		AllowHTTP:    true,
+		CookieMaxAge: time.Hour * 24 * 90,
+		MaxSessions:  srv.MaxSessions,
+	})
+}
+
+// SetMaxSessions caps the number of concurrently stored sessions. Sessions are
+// only stored for authenticated users, so this bounds concurrent logins; past
+// the cap the least recently used session is evicted. 0 means unlimited.
+func (srv *Server) SetMaxSessions(n int) {
+	srv.MaxSessions = n
+	session2.SetMaxSessions(n)
 }
 
 // New prepares a Server{} structure initialized with
@@ -159,8 +173,6 @@ func NewMulti() (*Server, error) {
 
 	// Default host
 	srv.Host = ":80"
-
-	srv.MaxSessions = 10000
 
 	// Server configuration file (optional)
 	srv.Config = ogdl.FromFile(".conf/config.ogdl")
@@ -308,9 +320,12 @@ func (srv *Server) WatchContext(path string) {
 					log.Println("context reload failed: invalid file", path)
 					continue
 				}
+				// Only the context is swapped. Re-initialising the session
+				// manager here would discard every stored session, dropping
+				// the userACL cache and any pending redirect, and would reset
+				// SessionTimeout to its default, undoing the -ts flag.
 				srv.ContextMu.Lock()
 				srv.Context = newCtx
-				srv.InitSessions()
 				srv.ContextMu.Unlock()
 				if srv.ContextService != nil {
 					srv.ContextService.GlobalContext(srv)

@@ -22,7 +22,8 @@ func (srv *Server) DynamicHandlerFn(host bool, fs *fn.FNode) http.HandlerFunc {
 		// Adapt the request to gserver.Request format.
 		r := ConvertRequest(rh, w, host, srv)
 		if r == nil {
-			http.Error(w, "Number of open sessions exceeded", 429)
+			// No context could be resolved for this host.
+			http.Error(w, http.StatusText(500), 500)
 			return
 		}
 

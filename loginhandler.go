@@ -31,6 +31,7 @@ func (srv *Server) LoginAdapter(host bool, userdb string) func(http.Handler) htt
 					session2.Remove(sess, w)
 				}
 				DeleteUserCookie(w)
+				DeleteRedirectCookie(w)
 				http.Redirect(w, r, "/login", 302)
 				return
 
@@ -69,31 +70,23 @@ func (srv *Server) LoginAdapter(host bool, userdb string) func(http.Handler) htt
 				//
 				// The redirect target may come straight from the submitted
 				// form, or (if the login form did not echo it) from the value
-				// stashed in the session when the login page was served.
+				// stashed in the redirect cookie when the login page was served.
 				rdir := r.FormValue("redirect")
 				if rdir == "" {
-					if sess := session2.Get(r); sess != nil {
-						if s, ok := sess.Attr("redirect").(string); ok && s != "" {
-							rdir = s
-							sess.SetAttr("redirect", "")
-						}
-					}
+					rdir = RedirectCookieValue(r)
 				}
-				if rdir == "" {
-					rdir = "/"
-				}
-				http.Redirect(w, r, rdir, http.StatusSeeOther)
+				DeleteRedirectCookie(w)
+
+				http.Redirect(w, r, safeRedirect(rdir), http.StatusSeeOther)
 				return
 			}
 
 			// Not a login/logout submit. If a redirect target is supplied
 			// (e.g. the login page was requested as /login?redirect=/foo),
-			// remember it in the session so it survives a login form that
+			// remember it in a signed cookie so it survives a login form that
 			// does not carry the 'redirect' parameter through to the POST.
 			if rdir := r.FormValue("redirect"); rdir != "" {
-				if sess := session2.Get(r); sess != nil {
-					sess.SetAttr("redirect", rdir)
-				}
+				SetRedirectCookie(w, rdir)
 			}
 
 			h.ServeHTTP(w, r)
