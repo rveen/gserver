@@ -8,13 +8,28 @@ import (
 	"strings"
 	"time"
 
+	"github.com/rveen/golib/fn"
 	"github.com/rveen/golib/fn/httphook"
 	"github.com/rveen/ogdl"
 	"github.com/rveen/session2"
 )
 
-// DynamicHandler ...
+// DynamicHandler serves dynamic content from srv.Root, enforcing path-level
+// auth (checkPath) and running any registered httphook interceptors.
 func (srv *Server) DynamicHandler(host bool) http.HandlerFunc {
+	return srv.dynamicHandler(host, nil)
+}
+
+// DynamicHandlerFn serves dynamic content from fs, falling back to srv.Root on
+// a miss. A supplied fs is treated as trusted: neither checkPath nor the
+// httphook interceptors run for it.
+//
+// Deprecated: retained for github.com/trukeio/gserver.
+func (srv *Server) DynamicHandlerFn(host bool, fs *fn.FNode) http.HandlerFunc {
+	return srv.dynamicHandler(host, fs)
+}
+
+func (srv *Server) dynamicHandler(host bool, fs *fn.FNode) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, rh *http.Request) {
 
@@ -36,30 +51,42 @@ func (srv *Server) DynamicHandler(host bool) http.HandlerFunc {
 			files.Add(gf)
 		}
 
-		// Check if path needs a user other than 'nobody'
-		user := r.Context.Node("user").String()
-		if (user == "" || user == "nobody") && !checkPath(r.Path, srv.Config) {
-			http.Redirect(w, rh, "/login?redirect="+rh.URL.Path, 302)
-			return
-		}
-
-		// Optional request interceptors (registered via golib/fn/httphook by
-		// blank-imported adapter packages in main.go, e.g. Altium->KiCad
-		// conversion). Run before normal file resolution; the first one to
-		// handle the request ends processing.
-		for _, h := range httphook.All() {
-			if h(srv.Root, w, rh, r.Path) {
-				log.Printf("DynHandler END (interceptor) %d us\n", time.Now().UnixMicro()-t)
+		// Get the file (or dir) corresponding to the path
+		if fs != nil {
+			// Custom FNode: try fs first, fall back to the standard filesystem.
+			fd := *fs
+			r.File = &fd
+			if err := r.Get(); err != nil {
+				f := *srv.Root
+				r.File = &f
+				if err = r.Get(); err != nil {
+					http.Error(w, http.StatusText(404), 404)
+					return
+				}
+			}
+		} else {
+			// Check if path needs a user other than 'nobody'
+			user := r.Context.Node("user").String()
+			if (user == "" || user == "nobody") && !checkPath(r.Path, srv.Config) {
+				http.Redirect(w, rh, "/login?redirect="+rh.URL.Path, 302)
 				return
 			}
-		}
 
-		// Get the file (or dir) corresponding to the path
-		err := r.Get()
+			// Optional request interceptors (registered via golib/fn/httphook by
+			// blank-imported adapter packages in main.go, e.g. Altium->KiCad
+			// conversion). Run before normal file resolution; the first one to
+			// handle the request ends processing.
+			for _, h := range httphook.All() {
+				if h(srv.Root, w, rh, r.Path) {
+					log.Printf("DynHandler END (interceptor) %d us\n", time.Now().UnixMicro()-t)
+					return
+				}
+			}
 
-		if err != nil {
-			http.Error(w, http.StatusText(404), 404)
-			return
+			if err := r.Get(); err != nil {
+				http.Error(w, http.StatusText(404), 404)
+				return
+			}
 		}
 
 		r.Process(srv)
@@ -82,7 +109,7 @@ func (srv *Server) DynamicHandler(host bool) http.HandlerFunc {
 		} else {
 			http.ServeContent(w, rh, filepath.Base(r.Path), time.Time{}, bytes.NewReader(r.File.Content))
 		}
-		log.Printf("DynHandlerFn #%d %s %s %dus %s\n", session2.Len(), rh.URL.Path, rh.RemoteAddr, time.Now().UnixMicro()-t, r.Context.Node("user").String())
+		log.Printf("DynHandler #%d %s %s %dus %s\n", session2.Len(), rh.URL.Path, rh.RemoteAddr, time.Now().UnixMicro()-t, r.Context.Node("user").String())
 
 	}
 }

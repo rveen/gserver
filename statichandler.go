@@ -6,13 +6,28 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+
+	"github.com/rveen/golib/fn"
 )
 
-// StaticFileHandler returns a handler that processes static files.
+// StaticFileHandler returns a handler that processes static files from srv.Root.
 //
 // if host is true, the hostname is prepended to the path
 // if userspace is true, the first element of a path is taken as a user
 func (srv *Server) StaticFileHandler(host, userspace, protect bool) http.HandlerFunc {
+	return srv.staticHandler(host, protect, nil)
+}
+
+// StaticFileHandlerFn returns a handler that processes static files from fs.
+//
+// if host is true, the hostname is prepended to the path
+//
+// Deprecated: retained for github.com/trukeio/gserver.
+func (srv *Server) StaticFileHandlerFn(host bool, fs *fn.FNode) http.HandlerFunc {
+	return srv.staticHandler(host, false, fs)
+}
+
+func (srv *Server) staticHandler(host, protect bool, fs *fn.FNode) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 
@@ -35,6 +50,9 @@ func (srv *Server) StaticFileHandler(host, userspace, protect bool) http.Handler
 
 		// Get the file. We make a copy of the struct!
 		fd := *srv.Root
+		if fs != nil {
+			fd = *fs
+		}
 		file := &fd
 
 		// Phase 1: resolve path without reading content
