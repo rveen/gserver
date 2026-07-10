@@ -4,6 +4,39 @@ All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Changed
+
+- **The `-Fn` handler variants are now wrappers around a single implementation.**
+  `statichandler-fn.go` and `dynhandler-fn.go` were copies of their base handlers
+  that differed only in serving from a caller-supplied `*fn.FNode` rather than
+  `srv.Root`, and the copies had drifted — `DynamicHandler` logged itself as
+  `DynHandlerFn`. Both files are gone; `statichandler.go` and `dynhandler.go` each
+  hold one unexported core taking an `fs *fn.FNode`, where `nil` selects
+  `srv.Root`. `StaticFileHandler`, `StaticFileHandlerFn`, `DynamicHandler` and
+  `DynamicHandlerFn` keep their signatures and behaviour, so callers such as
+  `github.com/trukeio/gserver` are unaffected.
+
+  A supplied `fs` continues to mean *trusted tree*: neither the `checkPath`
+  login redirect nor the `httphook` interceptors run for it, and a miss falls
+  back to `srv.Root`. That asymmetry predates this change and is now stated in
+  the doc comments rather than left implicit in a duplicated file.
+
+- **Static files are served with a uniform `Cache-Control: public, max-age=7200`.**
+  `StaticFileHandlerFn` previously sent `max-age=36000` for embedded assets. The
+  only effect is more frequent revalidation of embedded content.
+
+- `StaticFileHandlerFn` and `DynamicHandlerFn` are deprecated. They remain for
+  compatibility; new code should call the base handlers.
+
+### Added
+
+- Tests covering both handler branches: serving from an embedded `fs`, fallback
+  to `srv.Root` on a miss, `404` when neither resolves, `checkPath` redirecting an
+  anonymous request to `/login` when `fs` is `nil` and *not* redirecting when it
+  is set, and `protect` returning `401`.
+
 ## [1.0.0] - 2026-07-10
 
 The first tagged release. This file starts here: the project's earlier history
