@@ -53,6 +53,7 @@ import (
 	// the line to drop the dependency entirely.
 	_ "github.com/rveen/golib/formats/altium/plugin"
 
+	// TODO Change these for go-chi
 	fr "github.com/DATA-DOG/fastroute"
 	"github.com/justinas/alice"
 )
