@@ -189,6 +189,11 @@ func getSession(r *http.Request, w http.ResponseWriter, host bool, srv *Server) 
 		}
 	}
 
+	// Expose the HTTP method (authoritative: set after the form loop so a form
+	// field named "method" cannot shadow it). Templates use R.method to gate
+	// state-changing operations to POST requests.
+	data.Set("method", r.Method)
+
 	return sc.Graph(), sess
 }
 
