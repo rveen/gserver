@@ -83,13 +83,26 @@ func (srv *Server) dynamicHandler(host bool, fs *fn.FNode) http.HandlerFunc {
 				}
 			}
 
+			// A URL naming a directory gets a trailing slash before anything
+			// is served from it. Runs after the auth check above, so a 301
+			// never tells an anonymous caller that a protected directory
+			// exists, and after the interceptors, so a hook owning a path that
+			// happens to be a directory still sees the request.
+			if redirectToDirectory(w, rh, r, srv) {
+				return
+			}
+
 			if err := r.Get(); err != nil {
 				http.Error(w, http.StatusText(404), 404)
 				return
 			}
 		}
 
-		r.Process(srv)
+		if err := r.Process(srv); err != nil {
+			log.Printf("DynHandler %s: %v\n", rh.URL.Path, err)
+			http.Error(w, http.StatusText(500), 500)
+			return
+		}
 
 		w.Header().Set("Content-Type", r.Mime)
 
@@ -104,14 +117,52 @@ func (srv *Server) dynamicHandler(host bool, fs *fn.FNode) http.HandlerFunc {
 			}
 		}
 
-		if len(r.File.Content) == 0 {
-			http.Error(w, "Empty content", 500)
-		} else {
-			http.ServeContent(w, rh, filepath.Base(r.Path), time.Time{}, bytes.NewReader(r.File.Content))
-		}
+		// An empty body is a legitimate answer -- a zero-byte file, a template
+		// that produced nothing. Process reports a genuine failure as an error
+		// rather than leaving it to be guessed from the content length.
+		http.ServeContent(w, rh, filepath.Base(r.Path), time.Time{}, bytes.NewReader(r.File.Content))
 		log.Printf("DynHandler #%d %s %s %dus %s\n", session2.Len(), rh.URL.Path, rh.RemoteAddr, time.Now().UnixMicro()-t, r.Context.Node("user").String())
 
 	}
+}
+
+// redirectToDirectory answers a URL that literally names a directory with a
+// 301 to the same URL with a trailing slash, and reports whether it did.
+// This is what http.FileServer does, and for the same reason: a browser given
+// /app resolves every relative reference in the returned page against /, not
+// against /app/, so <script src="bundle.js"> becomes a request for /bundle.js.
+// A directory listing is the sharpest case -- every entry it links is relative.
+//
+// GET and HEAD only. A 301 permits a client to reissue a POST as a GET, which
+// would drop the form body; gserver's templates gate writes on R.method, so
+// that would quietly turn a submission into a read.
+//
+// The probe path and the redirect target are deliberately different strings.
+// The probe uses r.Path, which is hostname-prefixed in multi-host mode; the
+// target uses rh.URL.Path, since ConvertRequest runs filepath.Clean and that
+// strips the trailing slash, making rh.URL.Path the only place the information
+// survives.
+func redirectToDirectory(w http.ResponseWriter, rh *http.Request, r *Request, srv *Server) bool {
+
+	if rh.Method != http.MethodGet && rh.Method != http.MethodHead {
+		return false
+	}
+
+	if strings.HasSuffix(rh.URL.Path, "/") {
+		return false
+	}
+
+	if !srv.Root.IsDir(r.Path) {
+		return false
+	}
+
+	target := rh.URL.Path + "/"
+	if rh.URL.RawQuery != "" {
+		target += "?" + rh.URL.RawQuery
+	}
+
+	http.Redirect(w, rh, target, http.StatusMovedPermanently)
+	return true
 }
 
 func checkPath(path string, cfg *ogdl.Graph) bool {

@@ -1,10 +1,13 @@
 package gserver
 
 import (
+	"fmt"
+	"html"
 	"log"
 	"mime"
 	"net/http"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/chmike/securecookie"
@@ -303,7 +306,17 @@ func (r *Request) Process(srv *Server) error {
 
 			tpl := srv.Templates[tp]
 			if tpl == nil {
-				log.Println("no template for type", tp)
+				// A directory with no index.* still has to answer with its
+				// listing: that is the whole content of the response, and
+				// without a configured template there is nothing else to
+				// serve. Other types have a file behind them, so a missing
+				// template is a configuration fault worth reporting.
+				if r.File.Type == "dir" {
+					r.File.Content = dirListing(r)
+					r.Mime = "text/html"
+					return nil
+				}
+				return fmt.Errorf("no template configured for type %q", tp)
 			}
 			r.File.Content = tpl.Process(r.Context)
 			r.Mime = "text/html"
@@ -326,8 +339,11 @@ func (r *Request) Process(srv *Server) error {
 		}
 	} else {
 		// raw content with template
-		if r.HttpRequest.FormValue("t") != "" {
-			tpl := srv.Templates[r.HttpRequest.FormValue("t")]
+		if t := r.HttpRequest.FormValue("t"); t != "" {
+			tpl := srv.Templates[t]
+			if tpl == nil {
+				return fmt.Errorf("no template named %q", t)
+			}
 			r.File.Content = tpl.Process(r.Context)
 			r.Mime = "text/html"
 		}
@@ -340,6 +356,68 @@ func (r *Request) Process(srv *Server) error {
 	}
 
 	return nil
+}
+
+// dirListing renders a directory index in the absence of a configured "dir"
+// template. It is deliberately plain: a site that wants anything else supplies
+// the template, which always wins.
+//
+// Every href is relative, which is correct only because redirectToDirectory
+// has already guaranteed the URL ends in a slash.
+//
+// Entries beginning with '_' are omitted. Those are gserver's path variables
+// (/_user resolves for any path element), not files a visitor can follow, so
+// linking them would produce dead entries. Dot entries are dropped upstream,
+// by fn.dir.
+func dirListing(r *Request) []byte {
+
+	var b strings.Builder
+
+	base := r.Context.Get("R.url").String()
+	if base == "" {
+		base = "/"
+	}
+
+	b.WriteString("<!doctype html>\n<html><head><meta charset=\"utf-8\">\n")
+	b.WriteString("<title>Index of " + html.EscapeString(base) + "</title>\n")
+	b.WriteString("<style>body{font-family:system-ui,sans-serif;margin:2rem}" +
+		"table{border-collapse:collapse}td{padding:.15rem 1.5rem .15rem 0}" +
+		"td.n{text-align:right;color:#666;font-variant-numeric:tabular-nums}</style>\n")
+	b.WriteString("</head><body>\n<h1>Index of " + html.EscapeString(base) + "</h1>\n<table>\n")
+
+	if base != "/" {
+		b.WriteString("<tr><td><a href=\"../\">../</a></td><td></td></tr>\n")
+	}
+
+	if r.File.Data != nil {
+		for _, e := range r.File.Data.Out {
+			name := e.ThisString()
+			if name == "" || name[0] == '_' {
+				continue
+			}
+
+			isDir := e.Get("type").String() == "dir"
+
+			link := name
+			label := name
+			if isDir {
+				link += "/"
+				label += "/"
+			}
+
+			size := ""
+			if !isDir {
+				size = strconv.FormatInt(e.Get("size").Int64(0), 10)
+			}
+
+			b.WriteString("<tr><td><a href=\"" + html.EscapeString(link) + "\">" +
+				html.EscapeString(label) + "</a></td><td class=\"n\">" + size + "</td></tr>\n")
+		}
+	}
+
+	b.WriteString("</table>\n</body></html>\n")
+
+	return []byte(b.String())
 }
 
 func hasTplExtension(s string) bool {

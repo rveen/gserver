@@ -86,6 +86,7 @@ func NewWithConfig(host string, config, context *ogdl.Graph) (*Server, error) {
 	if tpls.Len() > 0 {
 		for _, tpl := range tpls.Out {
 			srv.Templates[tpl.ThisString()] = ogdl.NewTemplate(tpl.String())
+			log.Printf("Template configured for %s\n", tpl.ThisString())
 		}
 	}
 

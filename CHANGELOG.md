@@ -6,6 +6,49 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **A missing file is no longer answered with the directory's `index.*` under a
+  200.** `GET /app/missing.js` returned `app/index.html` with `Content-Type:
+  text/html` whenever the containing directory had an `index.*` or `readme.*`.
+  Browsers only noticed for module scripts, where strict MIME checking rejects
+  it; a stylesheet, image or source map at a stale path was silently accepted as
+  a 200 carrying HTML, and every 404 in the application was invisible to logs and
+  monitoring. The index fallback in `golib/fn/get.go` now applies only to path
+  elements that are not naming a file — `docs/cap1`, `docs/1.2` and `docs/v0.98`
+  continue into the index document as before. **Expect error rates to rise on
+  first deploy: that is the fault becoming visible.**
+
+- **A URL naming a directory now redirects to the same URL with a trailing
+  slash** (301, GET and HEAD only, query preserved). Without it a browser given
+  `/app` resolves every relative reference in the page against `/`, so
+  `<script src="bundle.js">` requested `/bundle.js`. The probe uses the new
+  literal `fn.FNode.IsDir`, so paths that merely resemble directories — `/doc`
+  resolving to `doc.md`, `/doc/cap1`, a `_user` wildcard — are left alone. It
+  runs after the auth check, so a 301 never reveals that a protected directory
+  exists, and skips POST, which a client may reissue as a GET.
+
+- **A directory with no `index.*` is served as a directory listing instead of
+  `500 "Empty content"`.** Rendering a directory required a `dir` template in
+  `.conf/config.ogdl`; without one the response was a 500 that blamed the
+  request for a configuration gap. `gserver` now falls back to a built-in HTML
+  listing — **a configured `dir` template still wins, so sites that have one are
+  unaffected**. Entries beginning with `_` (path variables) are omitted and all
+  names are HTML-escaped.
+
+- **A zero-byte file is served as a 200 with an empty body.** The `len(content)
+  == 0` test in `dynhandler.go` treated an empty `.txt` or placeholder `.js` as a
+  server error. `Request.Process` now reports a genuine failure as an error, and
+  a missing `document`/`data` template logs which template is missing rather than
+  the misleading `Empty content`.
+
+- **A directory holding several `index.*` files serves the right one.**
+  `fn.index()` took the first match in readdir order, so a directory with both
+  `index.css` and `index.html` answered the directory URL with the stylesheet.
+  Candidates are now ranked: `index.*` before `readme.*`, then `.html`, `.htm`,
+  `.md`, `.ogdl`, `.txt`, then anything else. A directory with a single candidate
+  resolves exactly as before.
+
 ### Changed
 
 - **The `-Fn` handler variants are now wrappers around a single implementation.**
