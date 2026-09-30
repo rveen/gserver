@@ -57,6 +57,8 @@ github.com/rveen/margaid v0.0.0-20260526073250-2471c92c43ba h1:sREJeU9WZxNg45DtC
 github.com/rveen/margaid v0.0.0-20260526073250-2471c92c43ba/go.mod h1:Y253vQ9CxwJtA92o/LG/G0RuCoPjYnaGth/zlQ4rcfU=
 github.com/rveen/ogdl v1.4.0 h1:Kt4wi9aHCLU1OIy7MScpHWWJzx2f7ybm+0gM90/hdCo=
 github.com/rveen/ogdl v1.4.0/go.mod h1:+k+Xap8qXTEaKIpj/SuKw8Xjvyp/KuECLvci0AVI7lY=
+github.com/rveen/ogdl v1.5.0 h1:4JHnNfdxbf4ODXhZWrVwqIQyZtd1/9B4/6JoR3Q3BAg=
+github.com/rveen/ogdl v1.5.0/go.mod h1:+k+Xap8qXTEaKIpj/SuKw8Xjvyp/KuECLvci0AVI7lY=
 github.com/rveen/session2 v1.1.0 h1:1QIlZGy76AF4d2Fk44c4PGusMWNG6eT6tUXV5hBuSXU=
 github.com/rveen/session2 v1.1.0/go.mod h1:UTDFjZdntYhCEbL04jUjkpAdTLTZObx1Po6H9kZBZkQ=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=

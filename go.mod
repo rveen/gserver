@@ -11,7 +11,7 @@ require (
 	github.com/rveen/certmagic v0.0.0-20250402171459-dbe624f78cbc
 	github.com/rveen/electronics v0.0.0-20260105102148-dff2981f83b4
 	github.com/rveen/golib v0.0.0-20260930061251-2efd08c8db7c
-	github.com/rveen/ogdl v1.4.0
+	github.com/rveen/ogdl v1.5.0
 	github.com/rveen/session2 v1.1.0
 )
 
