@@ -51,8 +51,8 @@ github.com/rveen/certmagic v0.0.0-20250402171459-dbe624f78cbc h1:rL41eDdjMReGb9T
 github.com/rveen/certmagic v0.0.0-20250402171459-dbe624f78cbc/go.mod h1:CN2jO+tgv5WsxBioCIrNgdthi6FX/nfwDrqUCjEFtgY=
 github.com/rveen/electronics v0.0.0-20260105102148-dff2981f83b4 h1:8bZzsfUrq3XSw8G+1Knx9w7YrBPDyx47vF1dSeHPldI=
 github.com/rveen/electronics v0.0.0-20260105102148-dff2981f83b4/go.mod h1:QiRHicKspUayu0NGE57bS3wk+8QgoX5cI4z9IsYyEyk=
-github.com/rveen/golib v0.0.0-20260930060303-d73bdafe7434 h1:OdSFgzFQ3tVYXeXx8m/MwwI29kzO2/Hrv0VodDQn+Dg=
-github.com/rveen/golib v0.0.0-20260930060303-d73bdafe7434/go.mod h1:bKPSk8ZKRYDmjzv2ub9b6SB8CS3IZxL37HHWyT2lwsE=
+github.com/rveen/golib v0.0.0-20260930061251-2efd08c8db7c h1:n8RTnYYrv7m4niT86yWVAdi5HxT81Bga9rAylYtNCh0=
+github.com/rveen/golib v0.0.0-20260930061251-2efd08c8db7c/go.mod h1:bKPSk8ZKRYDmjzv2ub9b6SB8CS3IZxL37HHWyT2lwsE=
 github.com/rveen/margaid v0.0.0-20260526073250-2471c92c43ba h1:sREJeU9WZxNg45DtCym6EyHpwhwLd5WoR/2CpGtmceg=
 github.com/rveen/margaid v0.0.0-20260526073250-2471c92c43ba/go.mod h1:Y253vQ9CxwJtA92o/LG/G0RuCoPjYnaGth/zlQ4rcfU=
 github.com/rveen/ogdl v1.4.0 h1:Kt4wi9aHCLU1OIy7MScpHWWJzx2f7ybm+0gM90/hdCo=
