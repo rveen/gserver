@@ -84,6 +84,20 @@ request context. Public methods in those plugins can then be accessed in templat
 If a plugin database.so is present, a Database object is expected which will be
 placed in the context so that $database.Method() can be called in the template.
 
+### Request interceptors
+
+Packages registered through `golib/fn/httphook` handle a request before normal
+file resolution, after the login check. They are enabled by a blank import in
+`gserver/main.go`; removing the line removes the dependency.
+
+- `golib/formats/altium/plugin` — `Foo.SchDoc.kicad_sch` (resp.
+  `Foo.PcbDoc.kicad_pcb`) is the Altium file converted to KiCad on the fly.
+- `golib/formats/nomo/plugin` — a `.nomo` worksheet is served as a typeset HTML
+  page, evaluated by Nomo's own WebAssembly engine (run in-process by wazero).
+  `?m=raw` returns the source. The math font is served at
+  `/.nomo/stix-two-math-subset.woff2`, its licence at `/.nomo/OFL.txt`. Links
+  must carry the `.nomo` extension; an extensionless path is not intercepted.
+
 ## Markdown processor ($MD())
 
 TODO: describe the extensions and the \escape inline syntax for processing style

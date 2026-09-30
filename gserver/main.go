@@ -52,6 +52,7 @@ import (
 	// interceptor (golib/fn/httphook) run before normal file resolution. Remove
 	// the line to drop the dependency entirely.
 	_ "github.com/rveen/golib/formats/altium/plugin"
+	_ "github.com/rveen/golib/formats/nomo/plugin"
 
 	// TODO Change these for go-chi
 	fr "github.com/DATA-DOG/fastroute"
