@@ -2,6 +2,7 @@ package gserver
 
 import (
 	"crypto/md5"
+	"database/sql"
 	"encoding/hex"
 	"log"
 	"net/http"
@@ -95,18 +96,25 @@ func (srv *Server) LoginAdapter(host bool, userdb string) func(http.Handler) htt
 	return mw
 }
 
-func GetACL(user string, srv *Server) string {
+// GetACL returns the acl of user from the users table, and whether the user
+// was found there. An empty acl from a found user is a user with every right;
+// one that was not found (or no user db, or a failed query) is not, and the
+// two must not be confused.
+func GetACL(user string, srv *Server) (string, bool) {
 
 	if srv.UserDb == nil {
-		return ""
+		return "", false
 	}
 
-	row := srv.UserDb.QueryRow("select acl from users where user='" + user + "'")
+	var acl sql.NullString
+	if err := srv.UserDb.QueryRow("select acl from users where user=?", user).Scan(&acl); err != nil {
+		if err != sql.ErrNoRows {
+			log.Printf("GetACL %s: %v\n", user, err)
+		}
+		return "", false
+	}
 
-	var acl string
-	row.Scan(&acl)
-
-	return acl
+	return acl.String, true
 }
 
 func validateUser(user, pass, userdb string, srv *Server) (bool, string) {
@@ -133,7 +141,7 @@ func validateUser(user, pass, userdb string, srv *Server) (bool, string) {
 			return false, ""
 		}
 
-		row := srv.UserDb.QueryRow("select passwd,acl from users where user='" + user + "'")
+		row := srv.UserDb.QueryRow("select passwd,acl from users where user=?", user)
 		var passwd, acl string
 		err := row.Scan(&passwd, &acl)
 

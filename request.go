@@ -143,12 +143,18 @@ func getSession(r *http.Request, w http.ResponseWriter, host bool, srv *Server) 
 	if user != "" && user != "nobody" {
 		acl = sc.Get("userACL").String()
 		if acl == "" {
-			acl = GetACL(user, srv)
-			if acl == "" {
-				acl = "-"
+			// A user found with an empty acl has every right, and is carried
+			// as "*" (gstore.AllRights): the empty string is anonymous, and is
+			// what a user that is not in the users table stays.
+			var found bool
+			acl, found = GetACL(user, srv)
+			if found && acl == "" {
+				acl = "*"
 			}
-			sc.Set("userACL", acl)
-			ensure().SetAttr("userACL", acl)
+			if acl != "" {
+				sc.Set("userACL", acl)
+				ensure().SetAttr("userACL", acl)
+			}
 		}
 	}
 
