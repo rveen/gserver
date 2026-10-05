@@ -29,7 +29,7 @@ type Request struct {
 	Session *session2.Session
 }
 
-var TplExtensions []string = []string{".htm", ".txt", ".csv", ".json", ".g", ".ogdl", ".xml", ".xlsx", ".svg", ".ics"}
+var TplExtensions []string = []string{".htm", ".txt", ".csv", ".json", ".g", ".ogdl", ".xml", ".svg", ".ics"}
 
 func ConvertRequest(r *http.Request, w http.ResponseWriter, host bool, srv *Server) *Request {
 
