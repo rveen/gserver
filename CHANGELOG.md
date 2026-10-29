@@ -110,8 +110,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   set), which adds its own.
 
 - `gserver/systemd/gserver@.service`: a template unit, one instance per site
-  under `/srv/gserver/`, running as an unprivileged user with
-  `CAP_NET_BIND_SERVICE`. The README documents installation, the config
+  under `/srv/gserver/`, running as user `gserver` in Apache's group `www`
+  (SUSE) with `CAP_NET_BIND_SERVICE`. The README documents installation, the config
   options and running behind Apache.
 
 - Tests for the client address taken from `X-Forwarded-For`.

@@ -72,17 +72,28 @@ invalid value stops the server at startup.
 ### systemd service
 
 `gserver/systemd/gserver@.service` is a template unit: one instance per site,
-`gserver@mysite` serving `/srv/gserver/mysite`. It runs as user `gserver`, may
-bind ports 80 and 443 without root (`CAP_NET_BIND_SERVICE`), keeps certificates in
-`/var/lib/gserver/certs` and restarts 30 s after a failure. All other options come
-from the site's `.conf/config.ogdl`.
+`gserver@mysite` serving `/srv/gserver/mysite`. It runs as user `gserver` in
+Apache's group `www`, may bind ports 80 and 443 without root
+(`CAP_NET_BIND_SERVICE`), keeps certificates in `/var/lib/gserver/certs` and
+restarts 30 s after a failure. All other options come from the site's
+`.conf/config.ogdl`.
+
+The group lets gserver and Apache share files (group-readable, or
+group-writable where both write) without running as the same user. `www` is
+Apache's group on SUSE; on other distributions change `Group=` to `www-data`
+(Debian, Ubuntu) or `apache` (RHEL, Fedora), or the service fails to start
+with status `216/GROUP`.
+
+An existing `gserver` user can be moved to the group with
+`sudo usermod -g www gserver`; then re-own its files
+(`sudo chown -R gserver:www /srv/gserver/mysite /var/lib/gserver`).
 
 Installation:
 
     sudo cp gserver/gserver /usr/local/bin/
-    sudo useradd -r -d /var/lib/gserver -s "$(command -v nologin)" gserver
-    sudo install -d -o gserver -g gserver /var/lib/gserver/certs
-    sudo chown -R gserver: /srv/gserver/mysite
+    sudo useradd -r -g www -d /var/lib/gserver -s "$(command -v nologin)" gserver
+    sudo install -d -o gserver -g www /var/lib/gserver/certs
+    sudo chown -R gserver:www /srv/gserver/mysite
     sudo cp gserver/systemd/gserver@.service /etc/systemd/system/
     sudo systemctl daemon-reload
     sudo systemctl enable --now gserver@mysite

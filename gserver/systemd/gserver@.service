@@ -1,8 +1,9 @@
 # gserver as a systemd service, one instance per site directory.
 #
 #   cp gserver /usr/local/bin/
-#   useradd -r -d /var/lib/gserver -s /usr/sbin/nologin gserver
-#   install -d -o gserver -g gserver /var/lib/gserver/certs
+#   useradd -r -g www -d /var/lib/gserver -s "$(command -v nologin)" gserver
+#   install -d -o gserver -g www /var/lib/gserver/certs
+#   chown -R gserver:www /srv/gserver/mysite
 #   cp gserver@.service /etc/systemd/system/
 #   systemctl enable --now gserver@mysite     # serves /srv/gserver/mysite
 #
@@ -24,7 +25,9 @@ Wants=network-online.target
 [Service]
 Type=simple
 User=gserver
-Group=gserver
+# Apache's group on SUSE, to share files with httpd. Other distributions:
+# Debian/Ubuntu www-data, RHEL/Fedora apache.
+Group=www
 ExecStart=/usr/local/bin/gserver -root /srv/gserver/%i -certs /var/lib/gserver/certs
 Restart=on-failure
 # Don't hammer Let's Encrypt if certificate issuance keeps failing
