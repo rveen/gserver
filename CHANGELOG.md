@@ -73,7 +73,48 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `StaticFileHandlerFn` and `DynamicHandlerFn` are deprecated. They remain for
   compatibility; new code should call the base handlers.
 
+- **Startup and listener errors exit with status 1.** A missing
+  `.conf/config.ogdl`, HTTPS without `-email`, or a port already in use used to
+  log a line and exit 0, so a supervisor saw a clean stop and
+  `Restart=on-failure` never fired. Errors are now written to stderr (even with
+  `-log=false`) and the process exits 1. `Server.Serve` returns its error, `nil`
+  after a regular `Shutdown()`; callers that ignore the result still compile.
+
+- **Request log lines show the real client behind a local reverse proxy.** For
+  requests from a loopback address carrying `X-Forwarded-For`, the address the
+  proxy appended (the header's last entry) is logged instead of `127.0.0.1`. The
+  header is ignored from any other peer, so remote clients cannot fake it. Only
+  logging is affected; no access decision uses the client address.
+
 ### Added
+
+- **`-root <dir>`**: change to the site directory at startup. All server paths
+  (`.conf/*`, uploads, documents) are relative, so this replaces depending on
+  the working directory.
+
+- **Server options in `.conf/config.ogdl`.** Every flag except `-root` can be
+  set in a `server` section (`host`, `secure_host`, `email`, `certs`,
+  `timeout`, `session_timeout`, `max_sessions`, `userdb`, `multi`, `log`,
+  `verbose`). Flags given on the command line win. An unknown key or invalid
+  value stops startup; **an existing `server` section with other keys will now
+  be rejected.**
+
+- **Graceful shutdown on SIGTERM and SIGINT.** `srv.Shutdown()`, which existed
+  but was never called, now runs on `systemctl stop` or Ctrl-C, so running
+  requests finish; the process then exits 0.
+
+- **`-certs <dir>`**: where Let's Encrypt certificates are stored (new
+  `Server.CertDir`). The default, under `$HOME`, is fragile for a service user.
+
+- Log lines carry no timestamp when running under journald (`JOURNAL_STREAM`
+  set), which adds its own.
+
+- `gserver/systemd/gserver@.service`: a template unit, one instance per site
+  under `/srv/gserver/`, running as an unprivileged user with
+  `CAP_NET_BIND_SERVICE`. The README documents installation, the config
+  options and running behind Apache.
+
+- Tests for the client address taken from `X-Forwarded-For`.
 
 - Tests covering both handler branches: serving from an embedded `fs`, fallback
   to `srv.Root` on a miss, `404` when neither resolves, `checkPath` redirecting an
