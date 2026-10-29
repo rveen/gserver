@@ -3,6 +3,7 @@
 *.dll
 *.so
 *.dylib
+gserver/gserver
 
 # Test binary, build with `go test -c`
 *.test

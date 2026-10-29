@@ -79,7 +79,7 @@ func (srv *Server) staticHandler(host, protect bool, fs *fn.FNode) http.HandlerF
 			w.Header().Set("Content-Type", mime.TypeByExtension(ext))
 			w.Header().Set("Cache-Control", "public, max-age=7200")
 			http.ServeContent(w, r, filepath.Base(file.Path), stat.ModTime(), f)
-			log.Printf("StaticHandler #0 %s %s %t\n", path, r.RemoteAddr, protect)
+			log.Printf("StaticHandler #0 %s %s %t\n", path, clientAddr(r), protect)
 			return
 		}
 
@@ -96,6 +96,6 @@ func (srv *Server) staticHandler(host, protect bool, fs *fn.FNode) http.HandlerF
 		w.Header().Set("Content-Type", mime.TypeByExtension(ext))
 		w.Header().Set("Cache-Control", "public, max-age=7200")
 		w.Write(file.Content)
-		log.Printf("StaticHandler #0 %s %s %t\n", path, r.RemoteAddr, protect)
+		log.Printf("StaticHandler #0 %s %s %t\n", path, clientAddr(r), protect)
 	}
 }

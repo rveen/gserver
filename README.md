@@ -108,6 +108,62 @@ Debian 10, Ubuntu 18.04). Things to check on the target machine:
    `ss -ltnp | grep -E ':80|:443'`
  - build for the target's architecture, e.g. `GOARCH=arm64 sh build`
 
+### Behind Apache
+
+gserver can run behind Apache httpd (or another reverse proxy) that handles
+HTTPS. gserver then serves plain HTTP on a local port, here 82.
+
+In the site's `.conf/config.ogdl`:
+
+    server
+      host 127.0.0.1:82
+      timeout 300
+
+ - Listen on `127.0.0.1`, not `:82`, so that gserver can only be reached
+   through Apache.
+ - Leave out `secure_host` and `email`: Apache does TLS, gserver needs no
+   certificates.
+ - `timeout` is gserver's read/write timeout for a whole request. The default of
+   10 seconds cuts off slow uploads and downloads, which Apache reports as
+   502 errors. Keep it at or below Apache's `ProxyTimeout`.
+
+The systemd unit can stay as it is. Port 82 is below 1024, so it still needs
+`CAP_NET_BIND_SERVICE`; with a port above 1024 those lines can be removed.
+
+On the Apache side (SUSE Linux Enterprise 15; Apache runs as `wwwrun:www`):
+
+    sudo a2enmod proxy
+    sudo a2enmod proxy_http
+    sudo a2enmod headers
+
+and in the HTTPS virtual host, e.g. `/etc/apache2/vhosts.d/mysite.conf`:
+
+    <VirtualHost *:443>
+        ServerName www.example.com
+        # SSLEngine on, SSLCertificateFile ... as usual
+
+        ProxyPreserveHost On
+        ProxyPass        / http://127.0.0.1:82/
+        ProxyPassReverse / http://127.0.0.1:82/
+        ProxyTimeout 300
+        RequestHeader set X-Forwarded-Proto "https"
+    </VirtualHost>
+
+followed by `sudo systemctl reload apache2`.
+
+ - `ProxyPreserveHost On` is required in multi-host mode (`-m`), where gserver
+   selects the site from the `Host` header. Without it every request arrives as
+   `127.0.0.1:82`.
+ - gserver's redirects are relative and its cookies work over plain HTTP, so
+   nothing else needs rewriting.
+ - Only Apache's ports (80/443) need to be open in the firewall, not 82.
+
+Client addresses: Apache adds the client's address to the `X-Forwarded-For`
+header. gserver logs that address instead of the proxy's, but only for requests
+coming from a loopback address (127.0.0.0/8, ::1), so that remote clients
+cannot fake it. The last entry of the header is used, since earlier entries
+can be set by the client.
+
 ## Parameter substitution in paths
 
 While resolving a path in the document root, entries of the form _token are
