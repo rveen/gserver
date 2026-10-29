@@ -26,9 +26,13 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	//	"net/http/pprof"
@@ -37,6 +41,7 @@ import (
 	"github.com/rveen/golib/fn"
 	"github.com/rveen/gserver"
 	"github.com/rveen/gserver/context"
+	"github.com/rveen/ogdl"
 
 	// Context dependencies: each blank import self-registers a named object
 	// into the template context via ctxreg. Add or remove a dependency by
@@ -59,12 +64,32 @@ import (
 	"github.com/justinas/alice"
 )
 
+// configKeys maps keys of the 'server' section in .conf/config.ogdl to
+// command line flags. Flags given on the command line take precedence.
+//
+//	server
+//	  host :8080
+//	  email someone@example.com
+var configKeys = map[string]string{
+	"log":             "log",
+	"multi":           "m",
+	"verbose":         "v",
+	"host":            "H",
+	"secure_host":     "S",
+	"timeout":         "t",
+	"session_timeout": "ts",
+	"max_sessions":    "ms",
+	"userdb":          "userdb",
+	"email":           "email",
+	"certs":           "certs",
+}
+
 func main() {
 
 	// Bind flags to non-pointer variables. Easier later.
 
 	var logging, verbose, hosts bool
-	var host, secureHost, userdb, email string
+	var host, secureHost, userdb, email, root, certs string
 	var timeout, sessionTimeout, maxSessions int
 
 	// flag.BoolVar(&logging, "static", false, "serve all files static") --> disables extension discovery
@@ -79,8 +104,26 @@ func main() {
 	flag.IntVar(&maxSessions, "ms", 0, "max concurrent logged-in sessions (0 = leave default)")
 	flag.StringVar(&userdb, "userdb", "htaccess", "user db: sqlite or htaccess (default)")
 	flag.StringVar(&email, "email", "", "email for Let's Encrypt SSL")
+	flag.StringVar(&root, "root", "", "site directory (default: current directory)")
+	flag.StringVar(&certs, "certs", "", "directory for Let's Encrypt certificates (default: certmagic's, under $HOME)")
 
 	flag.Parse()
+
+	// All server paths are relative to the site directory
+	if root != "" {
+		if err := os.Chdir(root); err != nil {
+			fail(err)
+		}
+	}
+
+	if err := applyConfig(".conf/config.ogdl"); err != nil {
+		fail(err)
+	}
+
+	// journald adds its own timestamps
+	if os.Getenv("JOURNAL_STREAM") != "" {
+		log.SetFlags(0)
+	}
 
 	secure := false
 	if secureHost != "" {
@@ -89,8 +132,7 @@ func main() {
 	}
 
 	if secure && email == "" && host != ":443" && host != "localhost:443" {
-		log.Println("Secure host needs an email (for Let's Encrypt)")
-		return
+		fail("secure host needs an email (for Let's Encrypt)")
 	}
 
 	var srv *gserver.Server
@@ -102,8 +144,7 @@ func main() {
 		srv, err = gserver.NewMulti()
 	}
 	if err != nil {
-		log.Println(err.Error())
-		return
+		fail(err)
 	}
 
 	if sessionTimeout > 0 {
@@ -113,6 +154,8 @@ func main() {
 	if maxSessions > 0 {
 		srv.SetMaxSessions(maxSessions)
 	}
+
+	srv.CertDir = certs
 
 	// srv.Login = gserver.LoginService{}
 	srv.ContextService = context.ContextService{}
@@ -144,5 +187,57 @@ func main() {
 	// Overwrite the original file handler with this one
 	srv.Root = fn.New(srv.DocRoot)
 
-	srv.Serve(secure, timeout, router, email)
+	// Serve until the listener fails or a SIGTERM / SIGINT arrives (systemctl
+	// stop, Ctrl-C); in the latter case let running requests finish.
+	done := make(chan error, 1)
+	go func() { done <- srv.Serve(secure, timeout, router, email) }()
+
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, syscall.SIGTERM, syscall.SIGINT)
+
+	select {
+	case err = <-done:
+	case s := <-sig:
+		log.Println("received", s)
+		srv.Shutdown()
+		err = <-done
+	}
+	if err != nil {
+		fail(err)
+	}
+}
+
+// applyConfig sets flags not given on the command line from the 'server'
+// section of the config file, if present.
+func applyConfig(file string) error {
+
+	cfg := ogdl.FromFile(file).Get("server")
+	if cfg == nil {
+		return nil
+	}
+
+	given := map[string]bool{}
+	flag.Visit(func(f *flag.Flag) { given[f.Name] = true })
+
+	for _, n := range cfg.Out {
+		key := n.ThisString()
+		name, ok := configKeys[key]
+		if !ok {
+			return fmt.Errorf("%s: unknown key server.%s", file, key)
+		}
+		if given[name] {
+			continue
+		}
+		if err := flag.Set(name, n.String()); err != nil {
+			return fmt.Errorf("%s: server.%s: %v", file, key, err)
+		}
+	}
+	return nil
+}
+
+// fail reports a fatal error and exits with status 1, so that systemd (or
+// any supervisor) sees the failure. It writes to stderr even with -log=false.
+func fail(v any) {
+	fmt.Fprintln(os.Stderr, "gserver:", v)
+	os.Exit(1)
 }

@@ -81,7 +81,9 @@ go build ./...
 go run ./gserver/main.go
 ```
 
-Default flags (see `gserver/main.go`): `-http=:8080`, `-https=:8443`, `-root=.`, `-timeout=10`.
+Flags (see `gserver/main.go`): `-root` (site dir, chdir at startup; all paths are relative to it), `-H` (default `:80`), `-S` (HTTPS host, enables Let's Encrypt), `-email`, `-certs` (cert storage dir), `-t` (timeout s, default 10), `-ts` (session timeout min), `-ms`, `-userdb`, `-m` (multi-host), `-log`, `-v`.
+
+Any flag except `-root` can also be set in the `server` section of `.conf/config.ogdl` (keys: `host`, `secure_host`, `email`, `certs`, `timeout`, `session_timeout`, `max_sessions`, `userdb`, `multi`, `log`, `verbose`); explicit flags win. Errors exit with status 1; SIGTERM/SIGINT trigger `srv.Shutdown()`. systemd unit: `gserver/systemd/gserver@.service`.
 
 ## Dependencies
 

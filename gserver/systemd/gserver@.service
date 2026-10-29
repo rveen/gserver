@@ -1,0 +1,44 @@
+# gserver as a systemd service, one instance per site directory.
+#
+#   cp gserver /usr/local/bin/
+#   useradd -r -d /var/lib/gserver -s /usr/sbin/nologin gserver
+#   install -d -o gserver -g gserver /var/lib/gserver/certs
+#   cp gserver@.service /etc/systemd/system/
+#   systemctl enable --now gserver@mysite     # serves /srv/gserver/mysite
+#
+# Server options go in the 'server' section of <site>/.conf/config.ogdl:
+#
+#   server
+#     secure_host :443
+#     email someone@example.com
+#     timeout 30
+#
+# Keys: host, secure_host, email, timeout, session_timeout, max_sessions,
+# userdb, multi, log, verbose, certs. Command line flags in ExecStart win.
+
+[Unit]
+Description=gserver web server (%i)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=gserver
+Group=gserver
+ExecStart=/usr/local/bin/gserver -root /srv/gserver/%i -certs /var/lib/gserver/certs
+Restart=on-failure
+# Don't hammer Let's Encrypt if certificate issuance keeps failing
+RestartSec=30
+
+# Ports 80/443 without running as root
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+NoNewPrivileges=true
+
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/srv/gserver/%i /var/lib/gserver
+
+[Install]
+WantedBy=multi-user.target

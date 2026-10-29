@@ -47,6 +47,7 @@ type Server struct {
 	Root           *fn.FNode
 	DocRoot        string
 	UploadDir      string
+	CertDir        string
 	DefaultUser    string
 	UserDb         *sql.DB
 	MaxSessions    int
@@ -241,7 +242,7 @@ func NewMulti() (*Server, error) {
 	return &srv, nil
 }
 
-func (srv *Server) Serve(secure bool, timeout int, router http.Handler, email string) {
+func (srv *Server) Serve(secure bool, timeout int, router http.Handler, email string) error {
 	// Serve either HTTP or HTTPS.
 	// In case of HTTPS, all requests to HTTP are redirected.
 	//
@@ -261,10 +262,13 @@ func (srv *Server) Serve(secure bool, timeout int, router http.Handler, email st
 
 		// use the staging endpoint while we're developing
 		certmagic.DefaultACME.CA = certmagic.LetsEncryptProductionCA
-		err := certmagic.HTTPS(srv.Hosts, router)
-		if err != nil {
-			log.Println(err.Error())
+
+		// keep certificates in a fixed place instead of $HOME
+		if srv.CertDir != "" {
+			certmagic.Default.Storage = &certmagic.FileStorage{Path: srv.CertDir}
 		}
+
+		return serveErr(certmagic.HTTPS(srv.Hosts, router))
 
 	} else {
 
@@ -281,8 +285,16 @@ func (srv *Server) Serve(secure bool, timeout int, router http.Handler, email st
 		}
 		log.Println("starting non-SSL, host:", srv.Host)
 		srv.server = server
-		server.ListenAndServe()
+		return serveErr(server.ListenAndServe())
 	}
+}
+
+// serveErr filters out the error returned after a regular Shutdown()
+func serveErr(err error) error {
+	if errors.Is(err, http.ErrServerClosed) {
+		return nil
+	}
+	return err
 }
 
 func (srv *Server) Shutdown() {

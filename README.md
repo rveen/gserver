@@ -12,6 +12,102 @@ static content. It is not optimized and not well tested, as of now.
  - Upload files go to /_user/file/$user/$folder/
  - Template functionality extensible through Go plugins
 
+## Running
+
+gserver serves the site in its working directory, or the one given with `-root`.
+That directory needs `.conf/config.ogdl` and `.conf/context.ogdl`; all other
+paths (`.conf/*`, uploads, documents) are relative to it.
+
+    cd gserver && sh build       # static binary (CGO_ENABLED=0)
+    ./gserver -root /srv/gserver/mysite -H :8080
+
+| Flag | Default | Meaning |
+|---|---|---|
+| `-root` | current dir | site directory |
+| `-H` | `:80` | HTTP host:port |
+| `-S` | | HTTPS host:port; enables Let's Encrypt (listens on 80 and 443, 80 redirects) |
+| `-email` | | email for Let's Encrypt (required with `-S`) |
+| `-certs` | `$HOME/.local/share/certmagic` | directory where certificates are stored |
+| `-t` | `10` | HTTP read/write timeout (seconds) |
+| `-ts` | `30` | session timeout (minutes) |
+| `-ms` | `0` | max concurrent logged-in sessions (0 = default) |
+| `-userdb` | `htaccess` | user database: `htaccess` or `sqlite` |
+| `-m` | `false` | multiple hosts (one subdirectory per host name) |
+| `-log` | `true` | logging on/off |
+| `-v` | `false` | periodic status messages |
+
+On SIGTERM or SIGINT gserver lets running requests finish and exits with status 0.
+Any startup or listener error is printed to stderr (even with `-log=false`) and
+exits with status 1. When started by systemd, log lines carry no timestamp, since
+journald adds its own.
+
+### Server options in .conf/config.ogdl
+
+Every flag except `-root` can also be set in a `server` section of
+`.conf/config.ogdl`, so that the command line can stay the same for all sites:
+
+    server
+      secure_host :443
+      email webmaster@example.com
+      timeout 30
+      session_timeout 60
+
+| Key | Flag |
+|---|---|
+| `host` | `-H` |
+| `secure_host` | `-S` |
+| `email` | `-email` |
+| `certs` | `-certs` |
+| `timeout` | `-t` |
+| `session_timeout` | `-ts` |
+| `max_sessions` | `-ms` |
+| `userdb` | `-userdb` |
+| `multi` | `-m` |
+| `log` | `-log` |
+| `verbose` | `-v` |
+
+A flag given on the command line overrides the config file. An unknown key or an
+invalid value stops the server at startup.
+
+### systemd service
+
+`gserver/systemd/gserver@.service` is a template unit: one instance per site,
+`gserver@mysite` serving `/srv/gserver/mysite`. It runs as user `gserver`, may
+bind ports 80 and 443 without root (`CAP_NET_BIND_SERVICE`), keeps certificates in
+`/var/lib/gserver/certs` and restarts 30 s after a failure. All other options come
+from the site's `.conf/config.ogdl`.
+
+Installation:
+
+    sudo cp gserver/gserver /usr/local/bin/
+    sudo useradd -r -d /var/lib/gserver -s "$(command -v nologin)" gserver
+    sudo install -d -o gserver -g gserver /var/lib/gserver/certs
+    sudo chown -R gserver: /srv/gserver/mysite
+    sudo cp gserver/systemd/gserver@.service /etc/systemd/system/
+    sudo systemctl daemon-reload
+    sudo systemctl enable --now gserver@mysite
+
+Then:
+
+    systemctl status gserver@mysite
+    journalctl -u gserver@mysite -f
+    sudo systemctl restart gserver@mysite    # after changing config.ogdl
+
+The unit locks the file system down to read-only (`ProtectSystem=strict`), except
+for the site directory and `/var/lib/gserver`. If the site writes elsewhere (e.g.
+repositories outside the site directory), add those paths to `ReadWritePaths=`,
+preferably in an override (`systemctl edit gserver@mysite`) rather than in the
+unit file.
+
+The unit needs systemd 232 or later (e.g. SUSE Linux Enterprise 15, RHEL 8,
+Debian 10, Ubuntu 18.04). Things to check on the target machine:
+
+ - the firewall must allow HTTP/HTTPS, e.g. with firewalld:
+   `firewall-cmd --permanent --add-service=http --add-service=https && firewall-cmd --reload`
+ - no other web server (apache2, nginx) may already be listening on 80/443:
+   `ss -ltnp | grep -E ':80|:443'`
+ - build for the target's architecture, e.g. `GOARCH=arm64 sh build`
+
 ## Parameter substitution in paths
 
 While resolving a path in the document root, entries of the form _token are
