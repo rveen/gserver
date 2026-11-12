@@ -6,6 +6,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Removed
+
+- **Built-in HTTPS (Let's Encrypt via certmagic) is gone; gserver serves plain
+  HTTP only.** Put it behind a proxy that terminates TLS (Caddy, Apache httpd,
+  nginx); the README's "Behind a proxy" section shows how. This removes the
+  `rveen/certmagic` dependency and 13 indirect ones.
+  - **Breaking API change:** `Server.Serve(secure bool, timeout int, router
+    http.Handler, email string)` is now `Server.Serve(timeout int, router
+    http.Handler)`. The `SecureHost` and `CertDir` fields are removed.
+  - The `-S`, `-email` and `-certs` flags are removed. The matching
+    `.conf/config.ogdl` keys `secure_host`, `email` and `certs` now stop the
+    server at startup with a message saying to remove them, instead of
+    silently serving HTTP to a site that expects HTTPS.
+  - The systemd unit no longer passes `-certs` or creates
+    `/var/lib/gserver/certs`.
+
 ### Fixed
 
 - **A missing file is no longer answered with the directory's `index.*` under a

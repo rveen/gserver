@@ -8,7 +8,7 @@
 
 ```
 gserver/
-  server.go            — Server struct, Serve(), HTTP config, TLS via certmagic
+  server.go            — Server struct, Serve() (plain HTTP only; TLS is a proxy's job), HTTP config
   filehandler.go       — FileHandler(): thin wrapper around http.FileServer (streaming, Range-safe)
   statichandler.go     — StaticFileHandler(): reads whole file into memory, w.Write(content)
   statichandler-fn.go  — StaticFileHandlerFn(): same as above, alternate entry
@@ -81,14 +81,13 @@ go build ./...
 go run ./gserver/main.go
 ```
 
-Flags (see `gserver/main.go`): `-root` (site dir, chdir at startup; all paths are relative to it), `-H` (default `:80`), `-S` (HTTPS host, enables Let's Encrypt), `-email`, `-certs` (cert storage dir), `-t` (timeout s, default 10), `-ts` (session timeout min), `-ms`, `-userdb`, `-m` (multi-host), `-log`, `-v`.
+Flags (see `gserver/main.go`): `-root` (site dir, chdir at startup; all paths are relative to it), `-H` (default `:80`), `-t` (timeout s, default 10), `-ts` (session timeout min), `-ms`, `-userdb`, `-m` (multi-host), `-log`, `-v`.
 
-Any flag except `-root` can also be set in the `server` section of `.conf/config.ogdl` (keys: `host`, `secure_host`, `email`, `certs`, `timeout`, `session_timeout`, `max_sessions`, `userdb`, `multi`, `log`, `verbose`); explicit flags win. Errors exit with status 1; SIGTERM/SIGINT trigger `srv.Shutdown()`. systemd unit: `gserver/systemd/gserver@.service`.
+Any flag except `-root` can also be set in the `server` section of `.conf/config.ogdl` (keys: `host`, `timeout`, `session_timeout`, `max_sessions`, `userdb`, `multi`, `log`, `verbose`); explicit flags win. The removed HTTPS keys `secure_host`, `email`, `certs` stop the server with an explanation. Errors exit with status 1; SIGTERM/SIGINT trigger `srv.Shutdown()`. systemd unit: `gserver/systemd/gserver@.service`.
 
 ## Dependencies
 
 - `github.com/rveen/golib` — fn, fs, document, id packages
 - `github.com/rveen/ogdl` — graph/template engine
 - `github.com/rveen/session` — session management
-- `github.com/rveen/certmagic` — TLS (fork with `Shutdown()`)
 - `github.com/DATA-DOG/fastroute` — HTTP router

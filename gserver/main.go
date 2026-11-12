@@ -69,19 +69,25 @@ import (
 //
 //	server
 //	  host :8080
-//	  email someone@example.com
+//	  timeout 30
 var configKeys = map[string]string{
 	"log":             "log",
 	"multi":           "m",
 	"verbose":         "v",
 	"host":            "H",
-	"secure_host":     "S",
 	"timeout":         "t",
 	"session_timeout": "ts",
 	"max_sessions":    "ms",
 	"userdb":          "userdb",
-	"email":           "email",
-	"certs":           "certs",
+}
+
+// removedKeys are keys of the 'server' section that configured HTTPS, which
+// gserver no longer does. They stop the server with an explanation rather than
+// a bare "unknown key", so that a site upgraded in place is told what to do.
+var removedKeys = map[string]bool{
+	"secure_host": true,
+	"email":       true,
+	"certs":       true,
 }
 
 func main() {
@@ -89,7 +95,7 @@ func main() {
 	// Bind flags to non-pointer variables. Easier later.
 
 	var logging, verbose, hosts bool
-	var host, secureHost, userdb, email, root, certs string
+	var host, userdb, root string
 	var timeout, sessionTimeout, maxSessions int
 
 	// flag.BoolVar(&logging, "static", false, "serve all files static") --> disables extension discovery
@@ -98,14 +104,11 @@ func main() {
 	flag.BoolVar(&hosts, "m", false, "enable multiple hosts (path on disk are affected")
 	flag.BoolVar(&verbose, "v", false, "turn periodic status message on/OFF")
 	flag.StringVar(&host, "H", ":80", "set host:port")
-	flag.StringVar(&secureHost, "S", "", "set secure_host:port")
-	flag.IntVar(&timeout, "t", 10, "set http(s) timeout (seconds)")
+	flag.IntVar(&timeout, "t", 10, "set http timeout (seconds)")
 	flag.IntVar(&sessionTimeout, "ts", 30, "set session timeout (minutes)")
 	flag.IntVar(&maxSessions, "ms", 0, "max concurrent logged-in sessions (0 = leave default)")
 	flag.StringVar(&userdb, "userdb", "htaccess", "user db: sqlite or htaccess (default)")
-	flag.StringVar(&email, "email", "", "email for Let's Encrypt SSL")
 	flag.StringVar(&root, "root", "", "site directory (default: current directory)")
-	flag.StringVar(&certs, "certs", "", "directory for Let's Encrypt certificates (default: certmagic's, under $HOME)")
 
 	flag.Parse()
 
@@ -123,16 +126,6 @@ func main() {
 	// journald adds its own timestamps
 	if os.Getenv("JOURNAL_STREAM") != "" {
 		log.SetFlags(0)
-	}
-
-	secure := false
-	if secureHost != "" {
-		host = secureHost
-		secure = true
-	}
-
-	if secure && email == "" && host != ":443" && host != "localhost:443" {
-		fail("secure host needs an email (for Let's Encrypt)")
 	}
 
 	var srv *gserver.Server
@@ -155,8 +148,6 @@ func main() {
 		srv.SetMaxSessions(maxSessions)
 	}
 
-	srv.CertDir = certs
-
 	// srv.Login = gserver.LoginService{}
 	srv.ContextService = context.ContextService{}
 	srv.ContextService.GlobalContext(srv)
@@ -169,7 +160,6 @@ func main() {
 
 	router := fr.RouterFunc(func(req *http.Request) http.Handler {
 		return fr.Chain(fr.New("/favicon.ico", staticHandler),
-			// fr.New("/.well-known/*filepath", staticHandler), // Letsencript ACME
 			// fr.New("/debug/pprof/*filepath", http.HandlerFunc(pprof.Index)),
 			fr.New("/files/*filepath", fileHandler),
 			fr.New("/static/*filepath", staticHandler),
@@ -190,7 +180,7 @@ func main() {
 	// Serve until the listener fails or a SIGTERM / SIGINT arrives (systemctl
 	// stop, Ctrl-C); in the latter case let running requests finish.
 	done := make(chan error, 1)
-	go func() { done <- srv.Serve(secure, timeout, router, email) }()
+	go func() { done <- srv.Serve(timeout, router) }()
 
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, syscall.SIGTERM, syscall.SIGINT)
@@ -221,6 +211,9 @@ func applyConfig(file string) error {
 
 	for _, n := range cfg.Out {
 		key := n.ThisString()
+		if removedKeys[key] {
+			return fmt.Errorf("%s: server.%s is no longer supported: gserver serves plain HTTP only; terminate HTTPS in a proxy (Caddy, Apache httpd, nginx) and remove this key", file, key)
+		}
 		name, ok := configKeys[key]
 		if !ok {
 			return fmt.Errorf("%s: unknown key server.%s", file, key)

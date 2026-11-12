@@ -3,6 +3,9 @@
 gserver is an experimental web server adapted to serve OGDL templates along with
 static content. It is not optimized and not well tested, as of now.
 
+gserver serves plain HTTP only. For HTTPS, run it behind a proxy that
+terminates TLS (Caddy, Apache httpd, nginx); see [Behind a proxy](#behind-a-proxy).
+
 ## Features
 
  - The file extension of (some) files below the document root is optional
@@ -25,9 +28,6 @@ paths (`.conf/*`, uploads, documents) are relative to it.
 |---|---|---|
 | `-root` | current dir | site directory |
 | `-H` | `:80` | HTTP host:port |
-| `-S` | | HTTPS host:port; enables Let's Encrypt (listens on 80 and 443, 80 redirects) |
-| `-email` | | email for Let's Encrypt (required with `-S`) |
-| `-certs` | `$HOME/.local/share/certmagic` | directory where certificates are stored |
 | `-t` | `10` | HTTP read/write timeout (seconds) |
 | `-ts` | `30` | session timeout (minutes) |
 | `-ms` | `0` | max concurrent logged-in sessions (0 = default) |
@@ -47,17 +47,13 @@ Every flag except `-root` can also be set in a `server` section of
 `.conf/config.ogdl`, so that the command line can stay the same for all sites:
 
     server
-      secure_host :443
-      email webmaster@example.com
+      host 127.0.0.1:82
       timeout 30
       session_timeout 60
 
 | Key | Flag |
 |---|---|
 | `host` | `-H` |
-| `secure_host` | `-S` |
-| `email` | `-email` |
-| `certs` | `-certs` |
 | `timeout` | `-t` |
 | `session_timeout` | `-ts` |
 | `max_sessions` | `-ms` |
@@ -67,15 +63,16 @@ Every flag except `-root` can also be set in a `server` section of
 | `verbose` | `-v` |
 
 A flag given on the command line overrides the config file. An unknown key or an
-invalid value stops the server at startup.
+invalid value stops the server at startup. The keys `secure_host`, `email` and
+`certs`, which configured the former built-in HTTPS, stop it with a message
+saying to remove them and terminate HTTPS in a proxy.
 
 ### systemd service
 
 `gserver/systemd/gserver@.service` is a template unit: one instance per site,
 `gserver@mysite` serving `/srv/gserver/mysite`. It runs as user `gserver` in
-Apache's group `www`, may bind ports 80 and 443 without root
-(`CAP_NET_BIND_SERVICE`), keeps certificates in `/var/lib/gserver/certs` and
-restarts 30 s after a failure. All other options come from the site's
+Apache's group `www`, may bind ports below 1024 without root
+(`CAP_NET_BIND_SERVICE`) and restarts 30 s after a failure. All other options come from the site's
 `.conf/config.ogdl`.
 
 The group lets gserver and Apache share files (group-readable, or
@@ -92,7 +89,7 @@ Installation:
 
     sudo cp gserver/gserver /usr/local/bin/
     sudo useradd -r -g www -d /var/lib/gserver -s "$(command -v nologin)" gserver
-    sudo install -d -o gserver -g www /var/lib/gserver/certs
+    sudo install -d -o gserver -g www /var/lib/gserver
     sudo chown -R gserver:www /srv/gserver/mysite
     sudo cp gserver/systemd/gserver@.service /etc/systemd/system/
     sudo systemctl daemon-reload
@@ -113,16 +110,28 @@ unit file.
 The unit needs systemd 232 or later (e.g. SUSE Linux Enterprise 15, RHEL 8,
 Debian 10, Ubuntu 18.04). Things to check on the target machine:
 
- - the firewall must allow HTTP/HTTPS, e.g. with firewalld:
-   `firewall-cmd --permanent --add-service=http --add-service=https && firewall-cmd --reload`
- - no other web server (apache2, nginx) may already be listening on 80/443:
-   `ss -ltnp | grep -E ':80|:443'`
+ - if gserver is reached directly (not through a proxy), the firewall must allow
+   HTTP, e.g. with firewalld:
+   `firewall-cmd --permanent --add-service=http && firewall-cmd --reload`
+ - no other process may already be listening on gserver's port:
+   `ss -ltnp | grep -E ':80\b'`
  - build for the target's architecture, e.g. `GOARCH=arm64 sh build`
 
-### Behind Apache
+### Behind a proxy
 
-gserver can run behind Apache httpd (or another reverse proxy) that handles
-HTTPS. gserver then serves plain HTTP on a local port, here 82.
+For HTTPS, gserver runs behind a reverse proxy (Caddy, Apache httpd, nginx)
+that terminates TLS. gserver then serves plain HTTP on a local port, here 82.
+
+With Caddy, which obtains and renews certificates itself, the whole proxy
+configuration is:
+
+    www.example.com {
+        reverse_proxy 127.0.0.1:82
+    }
+
+Caddy keeps the `Host` header and sets `X-Forwarded-For` by default.
+
+The rest of this section uses Apache.
 
 In the site's `.conf/config.ogdl`:
 
@@ -132,8 +141,6 @@ In the site's `.conf/config.ogdl`:
 
  - Listen on `127.0.0.1`, not `:82`, so that gserver can only be reached
    through Apache.
- - Leave out `secure_host` and `email`: Apache does TLS, gserver needs no
-   certificates.
  - `timeout` is gserver's read/write timeout for a whole request. The default of
    10 seconds cuts off slow uploads and downloads, which Apache reports as
    502 errors. Keep it at or below Apache's `ProxyTimeout`.

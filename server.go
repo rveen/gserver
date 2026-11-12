@@ -17,10 +17,6 @@ import (
 	"github.com/rveen/ogdl"
 	rpc "github.com/rveen/ogdl/ogdlrf"
 	"github.com/rveen/session2"
-
-	// TODO: remove certmagic dependence and HTTPS support (use front-end server)
-	"github.com/rveen/certmagic"
-	// A certmagic version with Shutdown() function!
 )
 
 type login interface {
@@ -39,7 +35,6 @@ type domainConfig interface {
 
 type Server struct {
 	Host           string
-	SecureHost     string
 	Hosts          []string
 	Config         *ogdl.Graph
 	HostContexts   map[string]*ogdl.Graph
@@ -47,7 +42,6 @@ type Server struct {
 	Root           *fn.FNode
 	DocRoot        string
 	UploadDir      string
-	CertDir        string
 	DefaultUser    string
 	UserDb         *sql.DB
 	MaxSessions    int
@@ -242,51 +236,29 @@ func NewMulti() (*Server, error) {
 	return &srv, nil
 }
 
-func (srv *Server) Serve(secure bool, timeout int, router http.Handler, email string) error {
-	// Serve either HTTP or HTTPS.
-	// In case of HTTPS, all requests to HTTP are redirected.
-	//
-	// HTTPS served with the aid of Let's Encrypt.
+// Serve serves plain HTTP on srv.Host (default ":80") until the listener fails
+// or Shutdown is called. gserver does not do TLS: put it behind a proxy (Caddy,
+// Apache httpd, nginx) that terminates HTTPS.
+func (srv *Server) Serve(timeout int, router http.Handler) error {
 
 	if timeout == 0 {
 		timeout = 30
 	}
 
-	if secure {
-
-		// read and agree to your CA's legal documents
-		certmagic.DefaultACME.Agreed = true
-
-		// provide an email address
-		certmagic.DefaultACME.Email = email
-
-		// use the staging endpoint while we're developing
-		certmagic.DefaultACME.CA = certmagic.LetsEncryptProductionCA
-
-		// keep certificates in a fixed place instead of $HOME
-		if srv.CertDir != "" {
-			certmagic.Default.Storage = &certmagic.FileStorage{Path: srv.CertDir}
-		}
-
-		return serveErr(certmagic.HTTPS(srv.Hosts, router))
-
-	} else {
-
-		if srv.Host == "" {
-			srv.Host = ":80"
-		}
-		server := &http.Server{
-			Addr:              srv.Host,
-			Handler:           router,
-			ReadTimeout:       time.Second * time.Duration(timeout),
-			WriteTimeout:      time.Second * time.Duration(timeout),
-			IdleTimeout:       30 * time.Second,
-			ReadHeaderTimeout: time.Second * time.Duration(timeout),
-		}
-		log.Println("starting non-SSL, host:", srv.Host)
-		srv.server = server
-		return serveErr(server.ListenAndServe())
+	if srv.Host == "" {
+		srv.Host = ":80"
 	}
+	server := &http.Server{
+		Addr:              srv.Host,
+		Handler:           router,
+		ReadTimeout:       time.Second * time.Duration(timeout),
+		WriteTimeout:      time.Second * time.Duration(timeout),
+		IdleTimeout:       30 * time.Second,
+		ReadHeaderTimeout: time.Second * time.Duration(timeout),
+	}
+	log.Println("starting, host:", srv.Host)
+	srv.server = server
+	return serveErr(server.ListenAndServe())
 }
 
 // serveErr filters out the error returned after a regular Shutdown()
@@ -302,7 +274,6 @@ func (srv *Server) Shutdown() {
 	if srv.server != nil {
 		srv.server.Shutdown(context.Background())
 	}
-	certmagic.Shutdown()
 }
 
 // WatchContext watches the given context.ogdl file and reloads srv.Context
