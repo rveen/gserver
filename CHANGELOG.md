@@ -6,6 +6,51 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **A library API for setting up a server**, so that a program built on
+  gserver no longer does it by hand:
+  - `Options` and `Open(Options)`: changes to the site directory, sets up
+    logging, reads `.conf/config.ogdl`, `.conf/context.ogdl` and (new,
+    optional) `.conf/templates.ogdl`, sets up sessions, installs the template
+    context and creates the upload directory.
+  - `Options.BindFlags` and `Options.ApplyConfig`: the command line and the
+    `server` section of the config file, shared by every build. New: `-l`
+    (key `logfile`) writes the log to a file.
+  - `Assets`: serve the site, and read its `.conf`, from embedded files.
+  - `Options.CheckPassword`: a build's own password check for the login form.
+  - `Options.DocFilter`: post-processes the HTML of `DOCV`, `DocLinksV` and
+    `docPartV`.
+  - `Server.Handlers()` for a build's own router, `Server.Mux()` for the
+    default routing, and `Run(srv, h)` to serve until SIGTERM or SIGINT.
+- The template built-ins now include `DOCV`, `DocLinksV`, `docPartV`,
+  `docDataPath` and `docDataHtml` (from KF).
+
+### Changed (breaking)
+
+- `Server.Serve(timeout int, router)` is now `Server.Serve(h)`, with the
+  timeout in `Server.Timeout`; `Server.Shutdown()` is now
+  `Server.Shutdown(ctx) error`. A `Shutdown` that arrives before `Serve` has
+  started now stops it, instead of being lost.
+- `ctxreg.Register` takes `func(cfg *ogdl.Graph) any`: a plugin is built from
+  the server config.
+- The template built-ins moved from the `context` package into `gserver`
+  (`Server.InstallContext`); `context.ContextService` is gone.
+- `docPart` and `docPartNoHeader` no longer log; `docPartNoHeader` logged the
+  whole document.
+
+### Fixed
+
+- A context reload (`WatchContext`) dropped the remote functions of the
+  `ogdlrf` section; they are now installed again, and the new context is
+  complete before requests see it.
+- With multiple hosts the `ogdlrf` functions were set on a nil global context;
+  they now go into each host's context.
+- The upload directory `.tmp` was created with mode 0644 (not searchable), and
+  the reference server never created it.
+- `-userdb sqlite`, as the help text offered, matched no user database and
+  every login failed; it is now another name for `sql`.
+
 ### Security
 
 - **The login cookie key is no longer a fixed value in the source.** The

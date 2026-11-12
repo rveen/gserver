@@ -1,7 +1,6 @@
 package gserver
 
 import (
-	"context"
 	"database/sql"
 	"errors"
 	"log"
@@ -16,7 +15,6 @@ import (
 	"github.com/rveen/golib/fn"
 	"github.com/rveen/gserver/session"
 	"github.com/rveen/ogdl"
-	rpc "github.com/rveen/ogdl/ogdlrf"
 )
 
 type login interface {
@@ -53,7 +51,23 @@ type Server struct {
 	Templates      map[string]*ogdl.Graph
 	Multi          bool
 	ContextMu      sync.RWMutex
-	server         *http.Server
+
+	// Timeout is the HTTP read and write timeout of Serve (default 10s).
+	Timeout time.Duration
+
+	// UserDB is the password check of the login form: "htaccess" or "sql".
+	// CheckPassword, when set, replaces it.
+	UserDB        string
+	CheckPassword func(user, pass string) bool
+
+	// DocFilter post-processes the HTML of DOCV, DocLinksV and docPartV for
+	// a logged-in user (Options.DocFilter).
+	DocFilter func(html, user string) string
+
+	assets  *Assets
+	mu      sync.Mutex // guards server and stopped
+	server  *http.Server
+	stopped bool
 }
 
 func NewWithConfig(host string, config, context *ogdl.Graph) (*Server, error) {
@@ -85,18 +99,7 @@ func NewWithConfig(host string, config, context *ogdl.Graph) (*Server, error) {
 		}
 	}
 
-	// Register remote functions
-	rfs := srv.Config.Get("ogdlrf")
-	if rfs != nil {
-		for _, rf := range rfs.Out {
-			name := rf.ThisString()
-			host := rf.Get("host").String()
-			proto := rf.Get("protocol").Int64(2)
-			log.Println("remote function registered:", name, host, proto)
-			f := rpc.Client{Host: host, Timeout: 1, Protocol: int(proto)}
-			srv.Context.Set(name, f.Call)
-		}
-	}
+	srv.registerRemoteFunctions()
 
 	srv.Hosts = append(srv.Hosts, srv.Host)
 
@@ -211,18 +214,7 @@ func NewMulti() (*Server, error) {
 		}
 	}
 
-	// Register remote functions
-	rfs := srv.Config.Get("ogdlrf")
-	if rfs != nil {
-		for _, rf := range rfs.Out {
-			name := rf.ThisString()
-			host := rf.Get("host").String()
-			proto := rf.Get("protocol").Int64(2)
-			log.Println("remote function registered:", name, host, proto)
-			f := rpc.Client{Host: host, Timeout: 1, Protocol: int(proto)}
-			srv.Context.Set(name, f.Call)
-		}
-	}
+	srv.registerRemoteFunctions()
 
 	// Default Auth
 	// srv.Login = LoginService{}
@@ -234,46 +226,6 @@ func NewMulti() (*Server, error) {
 	srv.InitSessions()
 
 	return &srv, nil
-}
-
-// Serve serves plain HTTP on srv.Host (default ":80") until the listener fails
-// or Shutdown is called. gserver does not do TLS: put it behind a proxy (Caddy,
-// Apache httpd, nginx) that terminates HTTPS.
-func (srv *Server) Serve(timeout int, router http.Handler) error {
-
-	if timeout == 0 {
-		timeout = 30
-	}
-
-	if srv.Host == "" {
-		srv.Host = ":80"
-	}
-	server := &http.Server{
-		Addr:              srv.Host,
-		Handler:           router,
-		ReadTimeout:       time.Second * time.Duration(timeout),
-		WriteTimeout:      time.Second * time.Duration(timeout),
-		IdleTimeout:       30 * time.Second,
-		ReadHeaderTimeout: time.Second * time.Duration(timeout),
-	}
-	log.Println("starting, host:", srv.Host)
-	srv.server = server
-	return serveErr(server.ListenAndServe())
-}
-
-// serveErr filters out the error returned after a regular Shutdown()
-func serveErr(err error) error {
-	if errors.Is(err, http.ErrServerClosed) {
-		return nil
-	}
-	return err
-}
-
-func (srv *Server) Shutdown() {
-	log.Println("Shutting down server")
-	if srv.server != nil {
-		srv.server.Shutdown(context.Background())
-	}
 }
 
 // WatchContext watches the given context.ogdl file and reloads srv.Context
@@ -304,10 +256,12 @@ func (srv *Server) WatchContext(path string) {
 					log.Println("context reload failed: invalid file", path)
 					continue
 				}
-				// Only the context is swapped. Re-initialising the session
+				// Only the context is swapped, with the built-in functions,
+				// remote functions and plugins installed into it first. Re-initialising the session
 				// manager here would discard every stored session, dropping
 				// the userACL cache and any pending redirect, and would reset
 				// SessionTimeout to its default, undoing the -ts flag.
+				srv.installInto(newCtx)
 				srv.ContextMu.Lock()
 				srv.Context = newCtx
 				srv.ContextMu.Unlock()

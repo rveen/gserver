@@ -6,8 +6,9 @@ package isolationctx
 import (
 	"github.com/rveen/electronics/isolation"
 	"github.com/rveen/gserver/context/ctxreg"
+	"github.com/rveen/ogdl"
 )
 
 func init() {
-	ctxreg.Register("isolation", func() any { return &isolation.Isolation{} })
+	ctxreg.Register("isolation", func(*ogdl.Graph) any { return &isolation.Isolation{} })
 }

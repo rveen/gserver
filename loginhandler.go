@@ -119,6 +119,11 @@ func GetACL(user string, srv *Server) (string, bool) {
 
 func validateUser(user, pass, userdb string, srv *Server) (bool, string) {
 
+	if srv.CheckPassword != nil {
+		log.Printf("login attempt: user %q, CheckPassword\n", user)
+		return srv.CheckPassword(user, pass), ""
+	}
+
 	log.Printf("login attempt: user %q, userdb %s\n", user, userdb)
 
 	switch userdb {
@@ -134,7 +139,7 @@ func validateUser(user, pass, userdb string, srv *Server) (bool, string) {
 			return auth.CheckSecret(pass, pw), ""
 		}
 
-	case "sql":
+	case "sql", "sqlite":
 
 		if srv.UserDb == nil {
 			log.Println("srv.UserDb is nil")

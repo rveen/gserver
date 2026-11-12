@@ -5,8 +5,9 @@ package htmlctx
 import (
 	"github.com/rveen/golib/html"
 	"github.com/rveen/gserver/context/ctxreg"
+	"github.com/rveen/ogdl"
 )
 
 func init() {
-	ctxreg.Register("html", func() any { return &html.Html{} })
+	ctxreg.Register("html", func(*ogdl.Graph) any { return &html.Html{} })
 }

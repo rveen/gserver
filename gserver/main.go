@@ -27,25 +27,16 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io"
 	"log"
-	"net/http"
 	"os"
-	"os/signal"
-	"syscall"
-	"time"
-
-	//	"net/http/pprof"
+	"path/filepath"
 	"runtime"
 
-	"github.com/rveen/golib/fn"
 	"github.com/rveen/gserver"
-	"github.com/rveen/gserver/context"
-	"github.com/rveen/ogdl"
 
 	// Context dependencies: each blank import self-registers a named object
 	// into the template context via ctxreg. Add or remove a dependency by
-	// editing this list only — context.go and the gserver package stay untouched.
+	// editing this list only.
 	_ "github.com/rveen/gserver/context/plugins/etoolsctx"
 	_ "github.com/rveen/gserver/context/plugins/filesctx"
 	_ "github.com/rveen/gserver/context/plugins/gosqlctx"
@@ -60,172 +51,31 @@ import (
 	_ "github.com/rveen/golib/formats/nomo/plugin"
 )
 
-// configKeys maps keys of the 'server' section in .conf/config.ogdl to
-// command line flags. Flags given on the command line take precedence.
-//
-//	server
-//	  host :8080
-//	  timeout 30
-var configKeys = map[string]string{
-	"log":             "log",
-	"multi":           "m",
-	"verbose":         "v",
-	"host":            "H",
-	"timeout":         "t",
-	"session_timeout": "ts",
-	"max_sessions":    "ms",
-	"userdb":          "userdb",
-}
-
-// removedKeys are keys of the 'server' section that configured HTTPS, which
-// gserver no longer does. They stop the server with an explanation rather than
-// a bare "unknown key", so that a site upgraded in place is told what to do.
-var removedKeys = map[string]bool{
-	"secure_host": true,
-	"email":       true,
-	"certs":       true,
-}
-
 func main() {
 
-	// Bind flags to non-pointer variables. Easier later.
-
-	var logging, verbose, hosts bool
-	var host, userdb, root string
-	var timeout, sessionTimeout, maxSessions int
-
-	// flag.BoolVar(&logging, "static", false, "serve all files static") --> disables extension discovery
-
-	flag.BoolVar(&logging, "log", true, "turn logging ON/off")
-	flag.BoolVar(&hosts, "m", false, "enable multiple hosts (path on disk are affected")
-	flag.BoolVar(&verbose, "v", false, "turn periodic status message on/OFF")
-	flag.StringVar(&host, "H", ":80", "set host:port")
-	flag.IntVar(&timeout, "t", 10, "set http timeout (seconds)")
-	flag.IntVar(&sessionTimeout, "ts", 30, "set session timeout (minutes)")
-	flag.IntVar(&maxSessions, "ms", 0, "max concurrent logged-in sessions (0 = leave default)")
-	flag.StringVar(&userdb, "userdb", "htaccess", "user db: sqlite or htaccess (default)")
-	flag.StringVar(&root, "root", "", "site directory (default: current directory)")
-
+	// Command line, then the `server` section of the site's config file for
+	// whatever the command line did not set.
+	var o gserver.Options
+	o.BindFlags(flag.CommandLine)
 	flag.Parse()
 
-	// All server paths are relative to the site directory
-	if root != "" {
-		if err := os.Chdir(root); err != nil {
-			fail(err)
-		}
-	}
-
-	if err := applyConfig(".conf/config.ogdl"); err != nil {
+	if err := o.ApplyConfig(filepath.Join(o.Root, ".conf/config.ogdl")); err != nil {
 		fail(err)
 	}
 
-	// journald adds its own timestamps
-	if os.Getenv("JOURNAL_STREAM") != "" {
-		log.SetFlags(0)
-	}
-
-	var srv *gserver.Server
-	var err error
-
-	if !hosts {
-		srv, err = gserver.New(host)
-	} else {
-		srv, err = gserver.NewMulti()
-	}
+	srv, err := gserver.Open(o)
 	if err != nil {
 		fail(err)
 	}
-
-	if sessionTimeout > 0 {
-		srv.SessionTimeout = time.Duration(sessionTimeout) * time.Minute
-	}
-
-	if maxSessions > 0 {
-		srv.SetMaxSessions(maxSessions)
-	}
-
-	// srv.Login = gserver.LoginService{}
-	srv.ContextService = context.ContextService{}
-	srv.ContextService.GlobalContext(srv)
 	go srv.WatchContext(".conf/context.ogdl")
-
-	staticHandler := srv.StaticFileHandler(hosts, false, false)
-	dynamicHandler := srv.LoginAdapter(hosts, userdb)(srv.DynamicHandler(hosts))
-	router := routes(staticHandler, gserver.FileHandler(), dynamicHandler)
 
 	log.Println("gserver starting, ", runtime.NumCPU(), "procs")
 
-	if logging == false {
-		println("further logging disabled!")
-		log.SetOutput(io.Discard)
-	}
-
-	// Overwrite the original file handler with this one
-	srv.Root = fn.New(srv.DocRoot)
-
 	// Serve until the listener fails or a SIGTERM / SIGINT arrives (systemctl
 	// stop, Ctrl-C); in the latter case let running requests finish.
-	done := make(chan error, 1)
-	go func() { done <- srv.Serve(timeout, router) }()
-
-	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, syscall.SIGTERM, syscall.SIGINT)
-
-	select {
-	case err = <-done:
-	case s := <-sig:
-		log.Println("received", s)
-		srv.Shutdown()
-		err = <-done
-	}
-	if err != nil {
+	if err := gserver.Run(srv, srv.Mux()); err != nil {
 		fail(err)
 	}
-}
-
-// routes maps URL paths to handlers. Paths ending in '/' match everything
-// below them; "/" catches whatever no other pattern matches. ServeMux answers
-// a path that is not clean (//, /./, /../) with a 301 to its cleaned form.
-func routes(static, files, dynamic http.Handler) *http.ServeMux {
-	mux := http.NewServeMux()
-	mux.Handle("/favicon.ico", static)
-	mux.Handle("/files/", files) // streaming, Range-safe
-	mux.Handle("/static/", static)
-	mux.Handle("/file/", static)
-	mux.Handle("/", dynamic)
-	// mux.HandleFunc("/debug/pprof/", pprof.Index)
-	return mux
-}
-
-// applyConfig sets flags not given on the command line from the 'server'
-// section of the config file, if present.
-func applyConfig(file string) error {
-
-	cfg := ogdl.FromFile(file).Get("server")
-	if cfg == nil {
-		return nil
-	}
-
-	given := map[string]bool{}
-	flag.Visit(func(f *flag.Flag) { given[f.Name] = true })
-
-	for _, n := range cfg.Out {
-		key := n.ThisString()
-		if removedKeys[key] {
-			return fmt.Errorf("%s: server.%s is no longer supported: gserver serves plain HTTP only; terminate HTTPS in a proxy (Caddy, Apache httpd, nginx) and remove this key", file, key)
-		}
-		name, ok := configKeys[key]
-		if !ok {
-			return fmt.Errorf("%s: unknown key server.%s", file, key)
-		}
-		if given[name] {
-			continue
-		}
-		if err := flag.Set(name, n.String()); err != nil {
-			return fmt.Errorf("%s: server.%s: %v", file, key, err)
-		}
-	}
-	return nil
 }
 
 // fail reports a fatal error and exits with status 1, so that systemd (or

@@ -8,15 +8,19 @@
 
 ```
 gserver/
-  server.go            — Server struct, Serve() (plain HTTP only; TLS is a proxy's job), HTTP config
+  open.go              — Open(Options), Handlers(), Mux(), Serve(h), Shutdown(ctx), Run(srv, h)
+  options.go           — Options, Assets, BindFlags(), ApplyConfig() (`server` section of config.ogdl)
+  builtins.go          — InstallContext(): built-in template functions, ogdlrf, ctxreg plugins
+  server.go            — Server struct, legacy New/NewWithConfig/NewMulti, WatchContext
   filehandler.go       — FileHandler(): thin wrapper around http.FileServer (streaming, Range-safe)
-  statichandler.go     — StaticFileHandler(): reads whole file into memory, w.Write(content)
-  statichandler-fn.go  — StaticFileHandlerFn(): same as above, alternate entry
-  dynhandler.go        — DynamicHandler(): full dynamic pipeline (session, auth, Get, Process, Write)
-  dynhandler-fn.go     — DynamicHandlerFn(): same with fallback to srv.Root
+  statichandler.go     — StaticFileHandler()/StaticFileHandlerFn(): static files, from disk or an fs.FS
+  dynhandler.go        — DynamicHandler()/DynamicHandlerFn(): full dynamic pipeline (session, auth, Get, Process, Write)
   request.go           — Request struct, ConvertRequest(), Request.Get(), Request.Process()
+  loginhandler.go      — LoginAdapter(), validateUser() (CheckPassword, htaccess, sql)
   upload.go            — fileUpload(): multipart upload handler
-  gserver/main.go      — Entry point: route registration
+  context/ctxreg/      — plugin registry: Register(name, func(cfg *ogdl.Graph) any)
+  context/plugins/*    — open plugins (etools, isolation, files, html, sql, strings)
+  gserver/main.go      — reference server: BindFlags, ApplyConfig, Open, Run(srv, srv.Mux())
 ```
 
 Key external packages (siblings in `../golib/`):
@@ -26,7 +30,7 @@ Key external packages (siblings in `../golib/`):
 
 ## Request → Response Flow
 
-### Route dispatch (`gserver/main.go`)
+### Route dispatch (`Server.Mux()` in `open.go`)
 | Route | Handler | Notes |
 |---|---|---|
 | `/favicon.ico` | `StaticFileHandler` | whole-file in memory |
@@ -81,13 +85,13 @@ go build ./...
 go run ./gserver/main.go
 ```
 
-Flags (see `gserver/main.go`): `-root` (site dir, chdir at startup; all paths are relative to it), `-H` (default `:80`), `-t` (timeout s, default 10), `-ts` (session timeout min), `-ms`, `-userdb`, `-m` (multi-host), `-log`, `-v`.
+Flags (see `Options.BindFlags` in `options.go`): `-root` (site dir, chdir at startup; all paths are relative to it), `-H` (default `:80`), `-t` (timeout s, default 10), `-ts` (session timeout min), `-ms`, `-userdb`, `-m` (multi-host), `-l` (log file), `-log`, `-v` (no effect).
 
-Any flag except `-root` can also be set in the `server` section of `.conf/config.ogdl` (keys: `host`, `timeout`, `session_timeout`, `max_sessions`, `userdb`, `multi`, `log`, `verbose`); explicit flags win. The removed HTTPS keys `secure_host`, `email`, `certs` stop the server with an explanation. Errors exit with status 1; SIGTERM/SIGINT trigger `srv.Shutdown()`. systemd unit: `gserver/systemd/gserver@.service`.
+Any flag except `-root` can also be set in the `server` section of `.conf/config.ogdl` (keys: `host`, `timeout`, `session_timeout`, `max_sessions`, `userdb`, `multi`, `logfile`, `log`, `verbose`); explicit flags win. The removed HTTPS keys `secure_host`, `email`, `certs` stop the server with an explanation. Errors exit with status 1; SIGTERM/SIGINT make `Run` call `srv.Shutdown(ctx)`. systemd unit: `gserver/systemd/gserver@.service`.
 
 ## Dependencies
 
 - `github.com/rveen/golib` — fn, fs, document, id packages
 - `github.com/rveen/ogdl` — graph/template engine
 - `session/` (this module) — in-memory session store; replaces `rveen/session2` with a new MIT implementation of the same API
-- Routing: the standard library's `net/http.ServeMux` (`routes()` in `gserver/main.go`); the library itself does not depend on a router
+- Routing: the library hands out `Handlers()` and is router-neutral; `Mux()` is the default wiring on the standard library's `net/http.ServeMux`

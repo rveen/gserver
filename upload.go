@@ -17,8 +17,9 @@ const (
 	tmpDir  = ".tmp"
 )
 
+// CreateUploadDir creates the directory uploads are received into.
 func CreateUploadDir() {
-	os.MkdirAll(tmpDir, 0644)
+	os.MkdirAll(tmpDir, 0o755)
 }
 
 func fileUpload(r *http.Request, user string) (*ogdl.Graph, error) {

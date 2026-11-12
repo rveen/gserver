@@ -5,8 +5,9 @@ package etoolsctx
 import (
 	"github.com/rveen/electronics/etools"
 	"github.com/rveen/gserver/context/ctxreg"
+	"github.com/rveen/ogdl"
 )
 
 func init() {
-	ctxreg.Register("etools", func() any { return &etools.Etools{} })
+	ctxreg.Register("etools", func(*ogdl.Graph) any { return &etools.Etools{} })
 }
