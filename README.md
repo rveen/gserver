@@ -15,6 +15,10 @@ terminates TLS (Caddy, Apache httpd, nginx); see [Behind a proxy](#behind-a-prox
  - Upload files go to /_user/file/$user/$folder/
  - Template functionality extensible through Go plugins
 
+## License
+
+MIT (see LICENSE).
+
 ## Running
 
 gserver serves the site in its working directory, or the one given with `-root`.

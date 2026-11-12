@@ -11,7 +11,6 @@ require (
 	github.com/rveen/electronics v0.0.0-00010101000000-000000000000
 	github.com/rveen/golib v0.0.0-20260930061251-2efd08c8db7c
 	github.com/rveen/ogdl v1.5.0
-	github.com/rveen/session2 v1.1.0
 )
 
 require (

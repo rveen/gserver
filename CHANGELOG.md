@@ -8,6 +8,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- **Session management is now part of this module**: the `session` package
+  (`github.com/rveen/gserver/session`) replaces the `github.com/rveen/session2`
+  dependency. It is a new implementation under the MIT license (session2
+  derives from icza/session and is Apache 2.0), with the same API apart from
+  the package name.
+  - `Get` no longer returns a session that has outlived its timeout. Before,
+    an expired session stayed usable until the periodic clean-up removed it,
+    which with the default interval could take up to 30 minutes.
+  - Eviction when `MaxSessions` is reached keeps a recency list instead of
+    sorting all sessions, so it costs O(1) per session.
+  - Programs that called `session2` directly alongside gserver (e.g. to count
+    sessions with `Len()`) must switch too: the session store is a
+    package-level global, so the two packages would not share it.
 - **The reference server routes with the standard library's
   `net/http.ServeMux`** instead of fastroute + alice, which are no longer
   dependencies. Dispatch is unchanged, with two exceptions, both standard

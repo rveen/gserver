@@ -12,8 +12,8 @@ import (
 
 	"github.com/chmike/securecookie"
 	"github.com/rveen/golib/fn"
+	"github.com/rveen/gserver/session"
 	"github.com/rveen/ogdl"
-	"github.com/rveen/session2"
 )
 
 type Request struct {
@@ -26,7 +26,7 @@ type Request struct {
 	Mime        string
 	// Session is nil for anonymous requests: a session is only stored once a
 	// user authenticates.
-	Session *session2.Session
+	Session *session.Session
 }
 
 var TplExtensions []string = []string{".htm", ".txt", ".csv", ".json", ".g", ".ogdl", ".xml", ".svg", ".ics"}
@@ -35,7 +35,7 @@ func ConvertRequest(r *http.Request, w http.ResponseWriter, host bool, srv *Serv
 
 	rq := &Request{HttpRequest: r}
 
-	var s *session2.Session
+	var s *session.Session
 
 	rq.Context, s = getSession(r, w, host, srv)
 	if rq.Context == nil {
@@ -62,12 +62,12 @@ func ConvertRequest(r *http.Request, w http.ResponseWriter, host bool, srv *Serv
 	return rq
 }
 
-func getSession(r *http.Request, w http.ResponseWriter, host bool, srv *Server) (*ogdl.Graph, *session2.Session) {
+func getSession(r *http.Request, w http.ResponseWriter, host bool, srv *Server) (*ogdl.Graph, *session.Session) {
 
 	// May be nil, and that is the normal case: anonymous requests get no stored
 	// session. One is created lazily below, only once an authenticated user is
 	// known. See ensure().
-	sess := session2.Get(r)
+	sess := session.Get(r)
 
 	// Build a per-request overlay: local nodes (user, userACL, R.*) shadow the
 	// shared read-only server context without copying it.
@@ -91,10 +91,10 @@ func getSession(r *http.Request, w http.ResponseWriter, host bool, srv *Server) 
 	// ensure returns the stored session, creating and registering it on first
 	// use. Only ever called once an authenticated user is known, so that an
 	// anonymous flood cannot fill the session table.
-	ensure := func() *session2.Session {
+	ensure := func() *session.Session {
 		if sess == nil {
-			sess = session2.NewSession(session2.SessOptions{Timeout: srv.SessionTimeout})
-			session2.Add(sess, w)
+			sess = session.NewSession(session.SessOptions{Timeout: srv.SessionTimeout})
+			session.Add(sess, w)
 		}
 		return sess
 	}

@@ -14,9 +14,9 @@ import (
 	"github.com/fsnotify/fsnotify"
 
 	"github.com/rveen/golib/fn"
+	"github.com/rveen/gserver/session"
 	"github.com/rveen/ogdl"
 	rpc "github.com/rveen/ogdl/ogdlrf"
-	"github.com/rveen/session2"
 )
 
 type login interface {
@@ -118,7 +118,7 @@ func NewWithConfig(host string, config, context *ogdl.Graph) (*Server, error) {
 func (srv *Server) InitSessions() {
 	srv.MaxSessions = 100000
 	srv.SessionTimeout = 30 * time.Minute
-	session2.Init(session2.Options{
+	session.Init(session.Options{
 		AllowHTTP:    true,
 		CookieMaxAge: time.Hour * 24 * 90,
 		MaxSessions:  srv.MaxSessions,
@@ -130,7 +130,7 @@ func (srv *Server) InitSessions() {
 // the cap the least recently used session is evicted. 0 means unlimited.
 func (srv *Server) SetMaxSessions(n int) {
 	srv.MaxSessions = n
-	session2.SetMaxSessions(n)
+	session.SetMaxSessions(n)
 }
 
 // New prepares a Server{} structure initialized with

@@ -10,8 +10,8 @@ import (
 
 	"github.com/rveen/golib/fn"
 	"github.com/rveen/golib/fn/httphook"
+	"github.com/rveen/gserver/session"
 	"github.com/rveen/ogdl"
-	"github.com/rveen/session2"
 )
 
 // DynamicHandler serves dynamic content from srv.Root, enforcing path-level
@@ -121,7 +121,7 @@ func (srv *Server) dynamicHandler(host bool, fs *fn.FNode) http.HandlerFunc {
 		// that produced nothing. Process reports a genuine failure as an error
 		// rather than leaving it to be guessed from the content length.
 		http.ServeContent(w, rh, filepath.Base(r.Path), time.Time{}, bytes.NewReader(r.File.Content))
-		log.Printf("DynHandler #%d %s %s %dus %s\n", session2.Len(), rh.URL.Path, clientAddr(rh), time.Now().UnixMicro()-t, r.Context.Node("user").String())
+		log.Printf("DynHandler #%d %s %s %dus %s\n", session.Len(), rh.URL.Path, clientAddr(rh), time.Now().UnixMicro()-t, r.Context.Node("user").String())
 
 	}
 }

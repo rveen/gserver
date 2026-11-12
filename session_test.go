@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/rveen/golib/fn"
+	"github.com/rveen/gserver/session"
 	"github.com/rveen/ogdl"
-	"github.com/rveen/session2"
 )
 
 // testServer builds the minimum Server needed by getSession(): a context to
@@ -36,8 +36,8 @@ func hasCookie(w *httptest.ResponseRecorder, name string) bool {
 // -------------------------------------------------------------------------
 
 func TestAnonymousRequestCreatesNoSession(t *testing.T) {
-	session2.Init(session2.Options{AllowHTTP: true, CleanInterval: time.Hour})
-	defer session2.Close()
+	session.Init(session.Options{AllowHTTP: true, CleanInterval: time.Hour})
+	defer session.Close()
 
 	srv := testServer()
 	w := httptest.NewRecorder()
@@ -51,8 +51,8 @@ func TestAnonymousRequestCreatesNoSession(t *testing.T) {
 	if sess != nil {
 		t.Error("anonymous request got a stored session")
 	}
-	if n := session2.Len(); n != 0 {
-		t.Errorf("session2.Len() = %d, want 0", n)
+	if n := session.Len(); n != 0 {
+		t.Errorf("session.Len() = %d, want 0", n)
 	}
 	if hasCookie(w, "sessid") {
 		t.Error("anonymous request got a sessid cookie")
@@ -62,23 +62,23 @@ func TestAnonymousRequestCreatesNoSession(t *testing.T) {
 // An attacker or crawler that ignores Set-Cookie used to create one session per
 // request, filling the table. It must now leave no trace at all.
 func TestAnonymousFloodCreatesNoSessions(t *testing.T) {
-	session2.Init(session2.Options{AllowHTTP: true, CleanInterval: time.Hour})
-	defer session2.Close()
+	session.Init(session.Options{AllowHTTP: true, CleanInterval: time.Hour})
+	defer session.Close()
 
 	srv := testServer()
 	for i := 0; i < 1000; i++ {
 		getSession(httptest.NewRequest("GET", "/", nil), httptest.NewRecorder(), false, srv)
 	}
-	if n := session2.Len(); n != 0 {
-		t.Errorf("session2.Len() = %d after 1000 anonymous requests, want 0", n)
+	if n := session.Len(); n != 0 {
+		t.Errorf("session.Len() = %d after 1000 anonymous requests, want 0", n)
 	}
 }
 
 // DefaultUser auto-login sets the user scalar but must not allocate a session,
 // or an auto-login deployment would allocate one per anonymous hit.
 func TestDefaultUserCreatesNoSession(t *testing.T) {
-	session2.Init(session2.Options{AllowHTTP: true, CleanInterval: time.Hour})
-	defer session2.Close()
+	session.Init(session.Options{AllowHTTP: true, CleanInterval: time.Hour})
+	defer session.Close()
 
 	srv := testServer()
 	srv.DefaultUser = "guest"
@@ -89,7 +89,7 @@ func TestDefaultUserCreatesNoSession(t *testing.T) {
 	if got := ctx.Get("user").String(); got != "guest" {
 		t.Errorf("user = %q, want %q", got, "guest")
 	}
-	if sess != nil || session2.Len() != 0 {
+	if sess != nil || session.Len() != 0 {
 		t.Error("DefaultUser allocated a session")
 	}
 }
@@ -99,8 +99,8 @@ func TestDefaultUserCreatesNoSession(t *testing.T) {
 // -------------------------------------------------------------------------
 
 func TestAuthenticatedRequestCreatesSession(t *testing.T) {
-	session2.Init(session2.Options{AllowHTTP: true, CleanInterval: time.Hour})
-	defer session2.Close()
+	session.Init(session.Options{AllowHTTP: true, CleanInterval: time.Hour})
+	defer session.Close()
 
 	srv := testServer()
 
@@ -119,8 +119,8 @@ func TestAuthenticatedRequestCreatesSession(t *testing.T) {
 	if sess == nil {
 		t.Fatal("authenticated request got no session")
 	}
-	if n := session2.Len(); n != 1 {
-		t.Errorf("session2.Len() = %d, want 1", n)
+	if n := session.Len(); n != 1 {
+		t.Errorf("session.Len() = %d, want 1", n)
 	}
 	if got := ctx.Get("user").String(); got != "alice" {
 		t.Errorf("user = %q, want %q", got, "alice")
@@ -133,8 +133,8 @@ func TestAuthenticatedRequestCreatesSession(t *testing.T) {
 // An identity injected by an upstream Authenticate middleware (bearer token,
 // trusted header) also materializes the session.
 func TestInjectedUserCreatesSession(t *testing.T) {
-	session2.Init(session2.Options{AllowHTTP: true, CleanInterval: time.Hour})
-	defer session2.Close()
+	session.Init(session.Options{AllowHTTP: true, CleanInterval: time.Hour})
+	defer session.Close()
 
 	srv := testServer()
 	r := httptest.NewRequest("GET", "/", nil)
@@ -161,8 +161,8 @@ func TestInjectedUserCreatesSession(t *testing.T) {
 // -------------------------------------------------------------------------
 
 func TestUnknownHostReturnsNilContext(t *testing.T) {
-	session2.Init(session2.Options{AllowHTTP: true, CleanInterval: time.Hour})
-	defer session2.Close()
+	session.Init(session.Options{AllowHTTP: true, CleanInterval: time.Hour})
+	defer session.Close()
 
 	srv := testServer()
 	srv.HostContexts = map[string]*ogdl.Graph{"known.example": ogdl.New(nil)}
@@ -196,14 +196,14 @@ func TestRedirectCookieRoundTrip(t *testing.T) {
 // Stashing the redirect must not touch the session table: /login is reached
 // anonymously, so a session-backed stash would reopen the fill vector.
 func TestRedirectStashCreatesNoSession(t *testing.T) {
-	session2.Init(session2.Options{AllowHTTP: true, CleanInterval: time.Hour})
-	defer session2.Close()
+	session.Init(session.Options{AllowHTTP: true, CleanInterval: time.Hour})
+	defer session.Close()
 
 	w := httptest.NewRecorder()
 	SetRedirectCookie(w, "/protected")
 
-	if n := session2.Len(); n != 0 {
-		t.Errorf("session2.Len() = %d, want 0", n)
+	if n := session.Len(); n != 0 {
+		t.Errorf("session.Len() = %d, want 0", n)
 	}
 }
 
