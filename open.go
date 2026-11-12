@@ -55,8 +55,8 @@ func Open(o Options) (*Server, error) {
 		}
 		log.SetOutput(f)
 	} else if os.Getenv("JOURNAL_STREAM") != "" {
-		// journald adds its own timestamps
-		log.SetFlags(0)
+		// journald adds its own timestamps; other flags a build set stay.
+		log.SetFlags(log.Flags() &^ (log.Ldate | log.Ltime | log.Lmicroseconds))
 	}
 
 	var srv *Server
