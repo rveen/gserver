@@ -256,3 +256,28 @@ func (net0) addr() (string, error) {
 	defer ln.Close()
 	return ln.Addr().String(), nil
 }
+
+// DOCV, DocLinksV and docPartV pass their HTML through DocFilter for a
+// logged-in user, and only then.
+func TestDocFilter(t *testing.T) {
+	srv := &Server{DocFilter: func(html, user string) string { return "[" + user + "]" + html }}
+	b := srv.builtins()
+	docv := b["DOCV"].(func(*ogdl.Graph, string) []byte)
+	links := b["DocLinksV"].(func(*ogdl.Graph, string, string) []byte)
+	part := b["docPartV"].(func(*ogdl.Graph, string, string) []byte)
+
+	ana := ogdl.FromString("user ana")
+	for name, out := range map[string][]byte{
+		"DOCV":      docv(ana, "Text"),
+		"DocLinksV": links(ana, "Text", "/"),
+		"docPartV":  part(ana, "# A\n\nText\n", "A"),
+	} {
+		if !strings.HasPrefix(string(out), "[ana]") {
+			t.Errorf("%s: got %q, want it filtered for ana", name, out)
+		}
+	}
+
+	if out := docv(ogdl.New(nil), "Text"); strings.HasPrefix(string(out), "[") {
+		t.Errorf("DOCV without a user: got %q, want it unfiltered", out)
+	}
+}
