@@ -4,7 +4,7 @@ package htmlctx
 
 import (
 	"github.com/rveen/golib/html"
-	"github.com/rveen/gserver/context/ctxreg"
+	"github.com/rveen/gserver/v2/context/ctxreg"
 	"github.com/rveen/ogdl"
 )
 

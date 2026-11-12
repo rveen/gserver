@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/rveen/golib/fn"
-	"github.com/rveen/gserver/session"
+	"github.com/rveen/gserver/v2/session"
 	"github.com/rveen/ogdl"
 )
 

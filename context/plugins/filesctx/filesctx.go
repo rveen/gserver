@@ -4,7 +4,7 @@ package filesctx
 
 import (
 	"github.com/rveen/golib/files"
-	"github.com/rveen/gserver/context/ctxreg"
+	"github.com/rveen/gserver/v2/context/ctxreg"
 	"github.com/rveen/ogdl"
 )
 

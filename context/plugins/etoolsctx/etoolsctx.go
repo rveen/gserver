@@ -4,7 +4,7 @@ package etoolsctx
 
 import (
 	"github.com/rveen/electronics/etools"
-	"github.com/rveen/gserver/context/ctxreg"
+	"github.com/rveen/gserver/v2/context/ctxreg"
 	"github.com/rveen/ogdl"
 )
 

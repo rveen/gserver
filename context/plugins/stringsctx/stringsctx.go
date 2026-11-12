@@ -4,7 +4,7 @@ package stringsctx
 
 import (
 	str "github.com/rveen/golib/strings"
-	"github.com/rveen/gserver/context/ctxreg"
+	"github.com/rveen/gserver/v2/context/ctxreg"
 	"github.com/rveen/ogdl"
 )
 

@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-11-12
+
+**The module path is now `github.com/rveen/gserver/v2`**: imports change from
+`github.com/rveen/gserver/...` to `github.com/rveen/gserver/v2/...`. Version
+1.0.0 stays available under the old path. Everything below, up to 1.0.0, is
+part of 2.0.0.
+
 ### Added
 
 - **A library API for setting up a server**, so that a program built on

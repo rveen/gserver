@@ -32,17 +32,17 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"github.com/rveen/gserver"
+	"github.com/rveen/gserver/v2"
 
 	// Context dependencies: each blank import self-registers a named object
 	// into the template context via ctxreg. Add or remove a dependency by
 	// editing this list only.
-	_ "github.com/rveen/gserver/context/plugins/etoolsctx"
-	_ "github.com/rveen/gserver/context/plugins/filesctx"
-	_ "github.com/rveen/gserver/context/plugins/gosqlctx"
-	_ "github.com/rveen/gserver/context/plugins/htmlctx"
-	_ "github.com/rveen/gserver/context/plugins/isolationctx"
-	_ "github.com/rveen/gserver/context/plugins/stringsctx"
+	_ "github.com/rveen/gserver/v2/context/plugins/etoolsctx"
+	_ "github.com/rveen/gserver/v2/context/plugins/filesctx"
+	_ "github.com/rveen/gserver/v2/context/plugins/gosqlctx"
+	_ "github.com/rveen/gserver/v2/context/plugins/htmlctx"
+	_ "github.com/rveen/gserver/v2/context/plugins/isolationctx"
+	_ "github.com/rveen/gserver/v2/context/plugins/stringsctx"
 
 	// Optional request interceptors: each blank import self-registers an HTTP
 	// interceptor (golib/fn/httphook) run before normal file resolution. Remove

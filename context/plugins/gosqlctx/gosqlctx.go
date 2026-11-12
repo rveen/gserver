@@ -4,7 +4,7 @@ package gosqlctx
 
 import (
 	"github.com/rveen/golib/gosql"
-	"github.com/rveen/gserver/context/ctxreg"
+	"github.com/rveen/gserver/v2/context/ctxreg"
 	"github.com/rveen/ogdl"
 )
 

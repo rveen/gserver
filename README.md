@@ -19,6 +19,43 @@ terminates TLS (Caddy, Apache httpd, nginx); see [Behind a proxy](#behind-a-prox
 
 MIT (see LICENSE).
 
+## As a library
+
+The module path is `github.com/rveen/gserver/v2` (v2 changed the API; v1.0.0
+remains for existing users). A program serving a site is a few lines:
+
+```go
+import (
+	"flag"
+	"log"
+	"path/filepath"
+
+	"github.com/rveen/gserver/v2"
+	_ "github.com/rveen/gserver/v2/context/plugins/htmlctx" // template objects
+)
+
+func main() {
+	var o gserver.Options
+	o.BindFlags(flag.CommandLine) // -root -H -t -ts -ms -userdb -l -log -v
+	flag.Parse()
+	// The `server` section of the site's config, for what flags did not set.
+	if err := o.ApplyConfig(filepath.Join(o.Root, ".conf/config.ogdl")); err != nil {
+		log.Fatal(err)
+	}
+	srv, err := gserver.Open(o)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Fatal(gserver.Run(srv, srv.Mux())) // until SIGTERM / SIGINT
+}
+```
+
+`Options` also takes `Assets` (serve the site from embedded files),
+`CheckPassword` (your own login check) and `DocFilter`. A program with its own
+router wires `srv.Handlers()` instead of `srv.Mux()`. Template objects are
+plugins: a package registers a factory with `context/ctxreg` in its `init`,
+and a blank import enables it. `gserver/main.go` is the reference server.
+
 ## Running
 
 gserver serves the site in its working directory, or the one given with `-root`.
@@ -35,10 +72,11 @@ paths (`.conf/*`, uploads, documents) are relative to it.
 | `-t` | `10` | HTTP read/write timeout (seconds) |
 | `-ts` | `30` | session timeout (minutes) |
 | `-ms` | `0` | max concurrent logged-in sessions (0 = default) |
-| `-userdb` | `htaccess` | user database: `htaccess` or `sqlite` |
+| `-userdb` | `htaccess` | user database: `htaccess` or `sql` (`sqlite` is the same) |
+| `-l` | stderr | log file (appended to) |
 | `-m` | `false` | multiple hosts (one subdirectory per host name) |
 | `-log` | `true` | logging on/off |
-| `-v` | `false` | periodic status messages |
+| `-v` | `false` | no effect; kept for compatibility |
 
 On SIGTERM or SIGINT gserver lets running requests finish and exits with status 0.
 Any startup or listener error is printed to stderr (even with `-log=false`) and

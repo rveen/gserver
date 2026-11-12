@@ -1,4 +1,4 @@
-module github.com/rveen/gserver
+module github.com/rveen/gserver/v2
 
 go 1.25.3
 

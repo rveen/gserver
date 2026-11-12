@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-`gserver` is a Go HTTP server that serves both static and dynamic content. It uses `github.com/rveen/golib/fn` as its filesystem abstraction layer and `github.com/rveen/ogdl` for templating and data.
+`gserver` is a Go HTTP server that serves both static and dynamic content. Module path: `github.com/rveen/gserver/v2` (v2 since 2026-11-12; v1.0.0 under the old path). It uses `github.com/rveen/golib/fn` as its filesystem abstraction layer and `github.com/rveen/ogdl` for templating and data.
 
 ## Repository Layout
 

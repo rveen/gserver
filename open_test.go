@@ -14,8 +14,8 @@ import (
 	"testing/fstest"
 	"time"
 
-	"github.com/rveen/gserver/context/ctxreg"
-	"github.com/rveen/gserver/session"
+	"github.com/rveen/gserver/v2/context/ctxreg"
+	"github.com/rveen/gserver/v2/session"
 	"github.com/rveen/ogdl"
 )
 
