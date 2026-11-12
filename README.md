@@ -45,6 +45,16 @@ Any startup or listener error is printed to stderr (even with `-log=false`) and
 exits with status 1. When started by systemd, log lines carry no timestamp, since
 journald adds its own.
 
+### Login cookie key
+
+The login cookie is signed with a secret key. Set it with the environment
+variable `GSERVER_COOKIE_KEY` (any string; use a long random one, e.g.
+`openssl rand -base64 32`). Without it gserver uses a random key for each
+run, logs a warning, and every login ends when the server restarts.
+
+Keep the key out of the site directory and the command line; with systemd,
+put it in an `EnvironmentFile` readable only by root (see the unit file).
+
 ### Server options in .conf/config.ogdl
 
 Every flag except `-root` can also be set in a `server` section of

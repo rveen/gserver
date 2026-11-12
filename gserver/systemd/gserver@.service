@@ -31,6 +31,11 @@ User=gserver
 # Debian/Ubuntu www-data, RHEL/Fedora apache.
 Group=www
 ExecStart=/usr/local/bin/gserver -root /srv/gserver/%i
+# Login cookie key: a file holding GSERVER_COOKIE_KEY=<long random string>,
+# mode 600, owned by root. Without it, logins end at every restart.
+#   install -m 600 /dev/null /etc/gserver/%i.env
+#   echo "GSERVER_COOKIE_KEY=$(openssl rand -base64 32)" > /etc/gserver/%i.env
+EnvironmentFile=-/etc/gserver/%i.env
 Restart=on-failure
 RestartSec=30
 

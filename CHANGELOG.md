@@ -6,6 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Security
+
+- **The login cookie key is no longer a fixed value in the source.** The
+  `userid` and `redirect` cookies were signed with a key published in this
+  repository unless the program called `SetUserCookieKey`, so anyone could
+  forge a login cookie for any user. The key now comes from
+  `SetUserCookieKey`, else the `GSERVER_COOKIE_KEY` environment variable, else
+  it is random for each run (with a warning; logins then end on restart).
+  **Programs built on gserver are affected until rebuilt**; set
+  `GSERVER_COOKIE_KEY` to keep logins across restarts.
+- **Passwords are no longer logged.** A login attempt logged the submitted
+  password, and with the `sql` user database also the stored and computed
+  password hashes. It now logs only the user name.
+
 ### Changed
 
 - **Session management is now part of this module**: the `session` package

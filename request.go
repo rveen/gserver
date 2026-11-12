@@ -439,7 +439,7 @@ func hasTplExtension(s string) bool {
 func UserCookie() *securecookie.Obj {
 
 	// Key is configurable via SetUserCookieKey (see authbridge.go).
-	userCookie := securecookie.MustNew("userid", userCookieKey, securecookie.Params{
+	userCookie := securecookie.MustNew("userid", cookieKey(), securecookie.Params{
 		Path:   "/",
 		MaxAge: 0,
 		Secure: false, // cookie received with HTTP for testing purpose
@@ -477,7 +477,7 @@ func DeleteUserCookie(w http.ResponseWriter) {
 // client fill the session table.
 func RedirectCookie() *securecookie.Obj {
 
-	return securecookie.MustNew("redirect", userCookieKey, securecookie.Params{
+	return securecookie.MustNew("redirect", cookieKey(), securecookie.Params{
 		Path:     "/",
 		MaxAge:   600,
 		HTTPOnly: true,

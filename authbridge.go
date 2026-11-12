@@ -2,7 +2,11 @@ package gserver
 
 import (
 	"context"
+	"crypto/rand"
 	"crypto/sha256"
+	"log"
+	"os"
+	"sync"
 )
 
 // authbridge.go lets an upstream Authenticate middleware (see
@@ -37,18 +41,47 @@ func userFromContext(ctx context.Context) *InjectedUser {
 	return u
 }
 
-// userCookieKey is the HMAC key authenticating the "userid" session cookie.
-// It defaults to a fixed development key and can be overridden at startup with
-// SetUserCookieKey (typically from an environment-supplied secret).
-var userCookieKey = []byte("f8hk39o9mx0dmrn1pa39jfla39djm3f0")
+// CookieKeyEnv names the environment variable that sets the cookie key.
+const CookieKeyEnv = "GSERVER_COOKIE_KEY"
 
-// SetUserCookieKey sets the session cookie HMAC key. key may be any length; it
-// is hashed to the 32 bytes securecookie requires. An empty key is ignored,
-// leaving the default in place. Call once at startup before serving.
+// userCookieKey is the HMAC key authenticating the "userid" and "redirect"
+// cookies. It comes from SetUserCookieKey, else from the GSERVER_COOKIE_KEY
+// environment variable, else it is random for this process: then nobody can
+// forge a cookie, but logins end when the server restarts.
+var userCookieKey, userCookieKeySet = initialCookieKey()
+
+var warnRandomKey sync.Once
+
+func initialCookieKey() ([]byte, bool) {
+	if k := os.Getenv(CookieKeyEnv); k != "" {
+		h := sha256.Sum256([]byte(k))
+		return h[:], true
+	}
+	b := make([]byte, 32)
+	if _, err := rand.Read(b); err != nil {
+		panic("gserver: cannot generate a cookie key: " + err.Error())
+	}
+	return b, false
+}
+
+// cookieKey returns the cookie key, warning once if it is the random one.
+func cookieKey() []byte {
+	if !userCookieKeySet {
+		warnRandomKey.Do(func() {
+			log.Printf("gserver: no cookie key configured; using a random one, so logins end when the server restarts. Set %s to keep them.", CookieKeyEnv)
+		})
+	}
+	return userCookieKey
+}
+
+// SetUserCookieKey sets the cookie HMAC key, overriding GSERVER_COOKIE_KEY.
+// key may be any length; it is hashed to the 32 bytes securecookie requires.
+// An empty key is ignored. Call once at startup before serving.
 func SetUserCookieKey(key []byte) {
 	if len(key) == 0 {
 		return
 	}
 	h := sha256.Sum256(key)
 	userCookieKey = h[:]
+	userCookieKeySet = true
 }
