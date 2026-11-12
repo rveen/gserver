@@ -119,7 +119,7 @@ func GetACL(user string, srv *Server) (string, bool) {
 
 func validateUser(user, pass, userdb string, srv *Server) (bool, string) {
 
-	log.Printf("user %s pass %s userdb %s\n", user, pass, userdb)
+	log.Printf("login attempt: user %q, userdb %s\n", user, userdb)
 
 	switch userdb {
 
@@ -145,16 +145,12 @@ func validateUser(user, pass, userdb string, srv *Server) (bool, string) {
 		var passwd, acl string
 		err := row.Scan(&passwd, &acl)
 
-		log.Printf("passwd %s acl %s err %v\n", passwd, acl, err)
-
 		if err != nil {
 			log.Printf("validateUser error: %s\n", err.Error())
 		}
 
 		hash := md5.Sum([]byte(pass))
 		pass = hex.EncodeToString(hash[:])
-
-		log.Printf("passwd %s <> pass %s\n", passwd, pass)
 
 		return passwd == pass, acl
 
