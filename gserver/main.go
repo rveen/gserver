@@ -58,10 +58,6 @@ import (
 	// the line to drop the dependency entirely.
 	_ "github.com/rveen/golib/formats/altium/plugin"
 	_ "github.com/rveen/golib/formats/nomo/plugin"
-
-	// TODO Change these for go-chi
-	fr "github.com/DATA-DOG/fastroute"
-	"github.com/justinas/alice"
 )
 
 // configKeys maps keys of the 'server' section in .conf/config.ogdl to
@@ -153,19 +149,9 @@ func main() {
 	srv.ContextService.GlobalContext(srv)
 	go srv.WatchContext(".conf/context.ogdl")
 
-	// Middleware chains
 	staticHandler := srv.StaticFileHandler(hosts, false, false)
-	dynamicHandler := alice.New(srv.LoginAdapter(hosts, userdb) /*, gserver.AccessAdapter("bla")*/).Then(srv.DynamicHandler(hosts))
-	fileHandler := gserver.FileHandler()
-
-	router := fr.RouterFunc(func(req *http.Request) http.Handler {
-		return fr.Chain(fr.New("/favicon.ico", staticHandler),
-			// fr.New("/debug/pprof/*filepath", http.HandlerFunc(pprof.Index)),
-			fr.New("/files/*filepath", fileHandler),
-			fr.New("/static/*filepath", staticHandler),
-			fr.New("/file/*filepath", staticHandler),
-			fr.New("/*filepath", dynamicHandler))
-	})
+	dynamicHandler := srv.LoginAdapter(hosts, userdb)(srv.DynamicHandler(hosts))
+	router := routes(staticHandler, gserver.FileHandler(), dynamicHandler)
 
 	log.Println("gserver starting, ", runtime.NumCPU(), "procs")
 
@@ -195,6 +181,20 @@ func main() {
 	if err != nil {
 		fail(err)
 	}
+}
+
+// routes maps URL paths to handlers. Paths ending in '/' match everything
+// below them; "/" catches whatever no other pattern matches. ServeMux answers
+// a path that is not clean (//, /./, /../) with a 301 to its cleaned form.
+func routes(static, files, dynamic http.Handler) *http.ServeMux {
+	mux := http.NewServeMux()
+	mux.Handle("/favicon.ico", static)
+	mux.Handle("/files/", files) // streaming, Range-safe
+	mux.Handle("/static/", static)
+	mux.Handle("/file/", static)
+	mux.Handle("/", dynamic)
+	// mux.HandleFunc("/debug/pprof/", pprof.Index)
+	return mux
 }
 
 // applyConfig sets flags not given on the command line from the 'server'

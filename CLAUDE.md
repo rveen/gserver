@@ -90,4 +90,4 @@ Any flag except `-root` can also be set in the `server` section of `.conf/config
 - `github.com/rveen/golib` — fn, fs, document, id packages
 - `github.com/rveen/ogdl` — graph/template engine
 - `github.com/rveen/session` — session management
-- `github.com/DATA-DOG/fastroute` — HTTP router
+- Routing: the standard library's `net/http.ServeMux` (`routes()` in `gserver/main.go`); the library itself does not depend on a router

@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- **The reference server routes with the standard library's
+  `net/http.ServeMux`** instead of fastroute + alice, which are no longer
+  dependencies. Dispatch is unchanged, with two exceptions, both standard
+  `ServeMux` behaviour:
+  - a path that is not clean (`//x`, `/a/./b`, `/a/../b`) is answered with a
+    301 to its cleaned form instead of being passed on as is;
+  - `/files` (no trailing slash) is redirected to `/files/` instead of going
+    to the dynamic handler.
+
 ### Removed
 
 - **Built-in HTTPS (Let's Encrypt via certmagic) is gone; gserver serves plain
