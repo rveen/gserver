@@ -2,13 +2,11 @@ module github.com/rveen/gserver
 
 go 1.25.3
 
-replace github.com/rveen/electronics => /files/go/src/github.com/rveen/electronics
-
 require (
 	github.com/abbot/go-http-auth v0.4.1-0.20230310155302-b2a0e3997b9a
 	github.com/chmike/securecookie v1.3.5
 	github.com/fsnotify/fsnotify v1.10.1
-	github.com/rveen/electronics v0.0.0-00010101000000-000000000000
+	github.com/rveen/electronics v0.0.0-20261105101525-c8252714aee9
 	github.com/rveen/golib v0.0.0-20260930061251-2efd08c8db7c
 	github.com/rveen/ogdl v1.5.0
 )
