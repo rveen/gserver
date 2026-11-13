@@ -329,7 +329,7 @@ func (r *Request) Process(srv *Server) error {
 
 		default: // 'file'. Check if it is a template
 			if hasTplExtension(r.File.Path) {
-				tpl, err := ogdl.ParseTemplate(string(r.File.Content))
+				tpl, err := ogdl.ParseTemplateV1(string(r.File.Content))
 				if err != nil {
 					return fmt.Errorf("template %s: %w", r.File.Path, err)
 				}
@@ -522,9 +522,9 @@ func safeRedirect(p string) string {
 	return "/"
 }
 
-// process renders a template. v1 rendered every template to the end and
-// never reported anything; v2 stops at the first failed expression or call.
-// The error is logged and what was rendered up to it is served.
+// process renders a template, parsed in v2's v1 mode (ParseTemplateV1): a
+// failed expression renders nothing and processing goes on, as in v1. The
+// errors are logged.
 func process(t *ogdl.Template, ctx *ogdl.Node, name string) []byte {
 	s, err := t.Process(ctx)
 	if err != nil {

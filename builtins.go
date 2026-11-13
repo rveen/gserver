@@ -126,7 +126,12 @@ func (srv *Server) builtins() map[string]any {
 }
 
 func template(context *ogdl.Node, template string) []byte {
-	s, err := ogdl.ProcessString(template, context)
+	t, err := ogdl.ParseTemplateV1(template)
+	if err != nil {
+		log.Printf("template(): %v", err)
+		return nil
+	}
+	s, err := t.Process(context)
 	if err != nil {
 		log.Printf("template(): %v", err)
 	}

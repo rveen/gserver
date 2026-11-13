@@ -96,7 +96,7 @@ func NewWithConfig(host string, config, context *ogdl.Node) (*Server, error) {
 	srv.Templates = make(map[string]*ogdl.Template)
 	if tpls.Len() > 0 {
 		for _, tpl := range tpls.Out {
-			t, err := ogdl.ParseTemplate(tpl.String())
+			t, err := ogdl.ParseTemplateV1(tpl.String())
 			if err != nil {
 				return nil, fmt.Errorf("config: template %s: %w", tpl.ThisString(), err)
 			}
@@ -221,7 +221,7 @@ func NewMulti() (*Server, error) {
 	srv.Templates = make(map[string]*ogdl.Template)
 	if tpls.Len() > 0 {
 		for _, tpl := range tpls.Out {
-			t, err := ogdl.ParseTemplate(tpl.String())
+			t, err := ogdl.ParseTemplateV1(tpl.String())
 			if err != nil {
 				return nil, fmt.Errorf("config: template %s: %w", tpl.ThisString(), err)
 			}

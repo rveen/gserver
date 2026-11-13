@@ -149,7 +149,7 @@ func (srv *Server) loadTemplates(fsys fs.FS, name string) error {
 		if tname == "" || tname[0] == '#' {
 			continue
 		}
-		t, err := ogdl.ParseTemplate(n.String())
+		t, err := ogdl.ParseTemplateV1(n.String())
 		if err != nil {
 			return fmt.Errorf("%s: template %s: %w", name, tname, err)
 		}
