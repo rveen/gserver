@@ -1,13 +1,16 @@
 package gserver
 
 import (
+	"bytes"
+	"errors"
 	"flag"
 	"fmt"
 	"io/fs"
+	"os"
 	"strconv"
 	"time"
 
-	"github.com/rveen/ogdl"
+	"github.com/rveen/ogdl/v2"
 )
 
 // Options configure a server opened with Open. The zero value is usable: every
@@ -167,12 +170,25 @@ var removedKeys = map[string]bool{
 // file is a path, usually filepath.Join(o.Root, ".conf/config.ogdl"). An
 // unknown key is an error, and so are the keys of the removed HTTPS support.
 func (o *Options) ApplyConfig(file string) error {
-	return o.applyConfig(file, ogdl.FromFile(file))
+	b, err := os.ReadFile(file)
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	// v1 accepted malformed input silently; v2 reports it, and a config
+	// that doesn't parse must not be mistaken for one without options.
+	g, err := ogdl.ParseV1(bytes.NewReader(b))
+	if err != nil {
+		return fmt.Errorf("%s: %w", file, err)
+	}
+	return o.applyConfig(file, g)
 }
 
-func (o *Options) applyConfig(file string, g *ogdl.Graph) error {
+func (o *Options) applyConfig(file string, g *ogdl.Node) error {
 
-	cfg := g.Get("server")
+	cfg := g.Lookup("server")
 	if cfg == nil {
 		return nil
 	}

@@ -4,10 +4,10 @@ package stringsctx
 
 import (
 	str "github.com/rveen/golib/strings"
-	"github.com/rveen/gserver/v2/context/ctxreg"
-	"github.com/rveen/ogdl"
+	"github.com/rveen/gserver/v3/context/ctxreg"
+	"github.com/rveen/ogdl/v2"
 )
 
 func init() {
-	ctxreg.Register("strings", func(*ogdl.Graph) any { return &str.Strings{} })
+	ctxreg.Register("strings", func(*ogdl.Node) any { return &str.Strings{} })
 }

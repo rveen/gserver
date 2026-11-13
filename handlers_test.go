@@ -9,7 +9,7 @@ import (
 	"testing/fstest"
 
 	"github.com/rveen/golib/fn"
-	"github.com/rveen/ogdl"
+	"github.com/rveen/ogdl/v2"
 )
 
 func newTestSrv(t *testing.T, root string) *Server {

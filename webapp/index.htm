@@ -20,7 +20,7 @@ $R
 <br><br>
 <table class="table">
 $for(r,zoekt.search(R.q))
-<tr><td><a href="">$r[0].repo / $r[0].file</a><br>$r[0].lines</td></tr>
+<tr><td><a href="">$r.repo / $r.file</a><br>$r.lines</td></tr>
 $end
 </table>
 
@@ -28,7 +28,7 @@ $(prjs=store.search("sid:104"))
 
 <table class="table">
 $for(prj,prjs)
-<tr><td>$prj[0].x0</td><td>$prj[0].x1</td></tr>
+<tr><td>$prj.x0</td><td>$prj.x1</td></tr>
 $end
 </table>
 

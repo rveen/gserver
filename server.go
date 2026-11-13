@@ -3,6 +3,8 @@ package gserver
 import (
 	"database/sql"
 	"errors"
+	"fmt"
+	"io/fs"
 	"log"
 	"net/http"
 	"os"
@@ -13,8 +15,8 @@ import (
 	"github.com/fsnotify/fsnotify"
 
 	"github.com/rveen/golib/fn"
-	"github.com/rveen/gserver/v2/session"
-	"github.com/rveen/ogdl"
+	"github.com/rveen/gserver/v3/session"
+	"github.com/rveen/ogdl/v2"
 )
 
 type login interface {
@@ -28,15 +30,15 @@ type contextService interface {
 }
 
 type domainConfig interface {
-	GetConfig(*ogdl.Graph, string, int) *ogdl.Graph
+	GetConfig(*ogdl.Node, string, int) *ogdl.Node
 }
 
 type Server struct {
 	Host           string
 	Hosts          []string
-	Config         *ogdl.Graph
-	HostContexts   map[string]*ogdl.Graph
-	Context        *ogdl.Graph
+	Config         *ogdl.Node
+	HostContexts   map[string]*ogdl.Node
+	Context        *ogdl.Node
 	Root           *fn.FNode
 	DocRoot        string
 	UploadDir      string
@@ -48,7 +50,7 @@ type Server struct {
 	Login          login
 	ContextService contextService
 	DomainConfig   domainConfig
-	Templates      map[string]*ogdl.Graph
+	Templates      map[string]*ogdl.Template
 	Multi          bool
 	ContextMu      sync.RWMutex
 
@@ -70,7 +72,7 @@ type Server struct {
 	stopped bool
 }
 
-func NewWithConfig(host string, config, context *ogdl.Graph) (*Server, error) {
+func NewWithConfig(host string, config, context *ogdl.Node) (*Server, error) {
 
 	srv := Server{}
 
@@ -90,11 +92,15 @@ func NewWithConfig(host string, config, context *ogdl.Graph) (*Server, error) {
 	srv.Context = context
 
 	// Preload templates
-	tpls := srv.Config.Get("templates")
-	srv.Templates = make(map[string]*ogdl.Graph)
+	tpls := srv.Config.Lookup("templates")
+	srv.Templates = make(map[string]*ogdl.Template)
 	if tpls.Len() > 0 {
 		for _, tpl := range tpls.Out {
-			srv.Templates[tpl.ThisString()] = ogdl.NewTemplate(tpl.String())
+			t, err := ogdl.ParseTemplate(tpl.String())
+			if err != nil {
+				return nil, fmt.Errorf("config: template %s: %w", tpl.ThisString(), err)
+			}
+			srv.Templates[tpl.ThisString()] = t
 			log.Printf("Template configured for %s\n", tpl.ThisString())
 		}
 	}
@@ -142,15 +148,15 @@ func (srv *Server) SetMaxSessions(n int) {
 func New(host string) (*Server, error) {
 
 	// Server configuration file (optional)
-	config := ogdl.FromFile(".conf/config.ogdl")
-	if config == nil {
-		return nil, errors.New("missing .conf/config.ogdl file")
+	config, err := readOgdl(os.DirFS("."), ".conf/config.ogdl")
+	if err != nil {
+		return nil, err
 	}
 
 	// Base context for templates (optional)
-	context := ogdl.FromFile(".conf/context.ogdl")
-	if context == nil {
-		return nil, errors.New("missing .conf/context.ogdl file")
+	context, err := readOgdl(os.DirFS("."), ".conf/context.ogdl")
+	if err != nil {
+		return nil, err
 	}
 
 	return NewWithConfig(host, config, context)
@@ -182,7 +188,7 @@ func NewMulti() (*Server, error) {
 	// Base context for templates
 	// Each host gets its own
 	files, _ := os.ReadDir(".")
-	srv.HostContexts = make(map[string]*ogdl.Graph)
+	srv.HostContexts = make(map[string]*ogdl.Node)
 
 	for _, f := range files {
 
@@ -199,18 +205,27 @@ func NewMulti() (*Server, error) {
 			continue
 		}
 
-		srv.HostContexts[f.Name()] = ogdl.FromFile(f.Name() + "/.conf/context.ogdl")
+		hctx, err := readOgdl(os.DirFS(f.Name()), ".conf/context.ogdl")
+		if err != nil && !errors.Is(err, fs.ErrNotExist) {
+			// v1 read a malformed file as an empty or partial context.
+			log.Println("host", f.Name(), ":", err)
+		}
+		srv.HostContexts[f.Name()] = hctx
 		log.Println("context loaded for host", f.Name())
 
 		srv.Hosts = append(srv.Hosts, f.Name())
 	}
 
 	// Preload templates
-	tpls := srv.Config.Get("templates")
-	srv.Templates = make(map[string]*ogdl.Graph)
+	tpls := srv.Config.Lookup("templates")
+	srv.Templates = make(map[string]*ogdl.Template)
 	if tpls.Len() > 0 {
 		for _, tpl := range tpls.Out {
-			srv.Templates[tpl.ThisString()] = ogdl.NewTemplate(tpl.String())
+			t, err := ogdl.ParseTemplate(tpl.String())
+			if err != nil {
+				return nil, fmt.Errorf("config: template %s: %w", tpl.ThisString(), err)
+			}
+			srv.Templates[tpl.ThisString()] = t
 		}
 	}
 

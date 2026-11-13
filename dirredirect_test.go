@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/rveen/golib/fn"
-	"github.com/rveen/ogdl"
+	"github.com/rveen/ogdl/v2"
 )
 
 // dirRoot builds a tree exercising every case the redirect has to tell apart:

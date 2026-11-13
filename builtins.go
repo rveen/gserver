@@ -3,11 +3,12 @@ package gserver
 import (
 	"log"
 	"strings"
+	"time"
 
 	"github.com/rveen/golib/document"
-	"github.com/rveen/gserver/v2/context/ctxreg"
-	"github.com/rveen/ogdl"
-	rpc "github.com/rveen/ogdl/ogdlrf"
+	"github.com/rveen/gserver/v3/context/ctxreg"
+	"github.com/rveen/ogdl/v2"
+	rpc "github.com/rveen/ogdl/v2/ogdlrf"
 )
 
 // InstallContext installs into the server's template contexts (the global one
@@ -28,7 +29,7 @@ func (srv *Server) InstallContext() {
 }
 
 // installInto installs the context values into g, which may be nil.
-func (srv *Server) installInto(g *ogdl.Graph) {
+func (srv *Server) installInto(g *ogdl.Node) {
 	if g == nil {
 		return
 	}
@@ -57,20 +58,20 @@ func (srv *Server) registerRemoteFunctions() {
 //	  name
 //	    host localhost:1135
 //	    protocol 2
-func (srv *Server) setRemoteFunctions(g *ogdl.Graph) {
+func (srv *Server) setRemoteFunctions(g *ogdl.Node) {
 	if g == nil || srv.Config == nil {
 		return
 	}
-	rfs := srv.Config.Get("ogdlrf")
+	rfs := srv.Config.Lookup("ogdlrf")
 	if rfs == nil {
 		return
 	}
 	for _, rf := range rfs.Out {
 		name := rf.ThisString()
-		host := rf.Get("host").String()
-		proto := rf.Get("protocol").Int64(2)
+		host := rf.Lookup("host").String()
+		proto := rf.Lookup("protocol").Int64(2)
 		log.Println("remote function registered:", name, host, proto)
-		f := rpc.Client{Host: host, Timeout: 1, Protocol: int(proto)}
+		f := rpc.Client{Host: host, Timeout: time.Second, Protocol: int(proto)}
 		g.Set(name, f.Call)
 	}
 }
@@ -82,11 +83,11 @@ func (srv *Server) setRemoteFunctions(g *ogdl.Graph) {
 // srv.DocFilter for a logged-in user.
 func (srv *Server) builtins() map[string]any {
 
-	filter := func(context *ogdl.Graph, s string) string {
+	filter := func(context *ogdl.Node, s string) string {
 		if srv.DocFilter == nil {
 			return s
 		}
-		if user := context.Get("user").String(); user != "" {
+		if user := context.Lookup("user").String(); user != "" {
 			s = srv.DocFilter(s, user)
 		}
 		return s
@@ -104,17 +105,17 @@ func (srv *Server) builtins() map[string]any {
 		"docPartNoHeader":  docPartNoHeader,
 		"docPartP1":        docPartP1,
 
-		"DOCV": func(context *ogdl.Graph, doc string) []byte {
+		"DOCV": func(context *ogdl.Node, doc string) []byte {
 			d, _ := document.New(doc)
 			d.Context = context
 			return []byte(filter(context, d.Html()))
 		},
-		"DocLinksV": func(context *ogdl.Graph, doc, urlbase string) []byte {
+		"DocLinksV": func(context *ogdl.Node, doc, urlbase string) []byte {
 			d, _ := document.New(doc)
 			d.Context = context
 			return []byte(filter(context, d.HtmlWithLinks(urlbase)))
 		},
-		"docPartV": func(context *ogdl.Graph, doc, path string) []byte {
+		"docPartV": func(context *ogdl.Node, doc, path string) []byte {
 			path = strings.ReplaceAll(path, "/", ".")
 			d, _ := document.New(doc)
 			d.Context = context
@@ -124,9 +125,12 @@ func (srv *Server) builtins() map[string]any {
 	}
 }
 
-func template(context *ogdl.Graph, template string) []byte {
-	t := ogdl.NewTemplate(template)
-	return t.Process(context)
+func template(context *ogdl.Node, template string) []byte {
+	s, err := ogdl.ProcessString(template, context)
+	if err != nil {
+		log.Printf("template(): %v", err)
+	}
+	return []byte(s)
 }
 
 func doc(doc string) []byte {
@@ -144,17 +148,17 @@ func docLinksNumbered(doc, urlbase string) []byte {
 	return []byte(d.HtmlWithLinks(urlbase))
 }
 
-func docData(doc string) *ogdl.Graph {
+func docData(doc string) *ogdl.Node {
 	d, _ := document.New(doc)
 	return d.Data()
 }
 
 // docDataPath returns the part of a document's data at path ('/' or '.'
 // separated).
-func docDataPath(doc, path string) *ogdl.Graph {
+func docDataPath(doc, path string) *ogdl.Node {
 	d, _ := document.New(doc)
 	path = strings.ReplaceAll(path, "/", ".")
-	return d.Data().Get(path)
+	return d.Data().Lookup(path)
 }
 
 // docDataHtml renders the part of a document's data at path as HTML, with
@@ -164,7 +168,7 @@ func docDataHtml(doc, path, base string) string {
 	g := d.Data()
 	path = strings.ReplaceAll(path, "/", ".")
 	if path != "" {
-		g = g.Get(path)
+		g = g.Lookup(path)
 	}
 	return g.Html(base)
 }

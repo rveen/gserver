@@ -1,6 +1,7 @@
 package gserver
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -14,7 +15,7 @@ import (
 	"time"
 
 	"github.com/rveen/golib/fn"
-	"github.com/rveen/ogdl"
+	"github.com/rveen/ogdl/v2"
 )
 
 // Open sets up a server as described by o: it changes to the site directory,
@@ -69,7 +70,7 @@ func Open(o Options) (*Server, error) {
 		if o.Assets != nil && o.Assets.Conf != nil {
 			conf = o.Assets.Conf
 		}
-		var config, ctx *ogdl.Graph
+		var config, ctx *ogdl.Node
 		if config, err = readOgdl(conf, ".conf/config.ogdl"); err != nil {
 			return nil, err
 		}
@@ -110,14 +111,14 @@ func Open(o Options) (*Server, error) {
 }
 
 // readOgdl reads a required OGDL file from fsys.
-func readOgdl(fsys fs.FS, name string) (*ogdl.Graph, error) {
+func readOgdl(fsys fs.FS, name string) (*ogdl.Node, error) {
 	b, err := fs.ReadFile(fsys, name)
 	if err != nil {
 		return nil, fmt.Errorf("missing %s file: %w", name, err)
 	}
-	g := ogdl.FromBytes(b)
-	if g == nil {
-		g = ogdl.New(nil)
+	g, err := ogdl.ParseV1(bytes.NewReader(b))
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", name, err)
 	}
 	return g, nil
 }
@@ -148,7 +149,11 @@ func (srv *Server) loadTemplates(fsys fs.FS, name string) error {
 		if tname == "" || tname[0] == '#' {
 			continue
 		}
-		srv.Templates[tname] = ogdl.NewTemplate(n.String())
+		t, err := ogdl.ParseTemplate(n.String())
+		if err != nil {
+			return fmt.Errorf("%s: template %s: %w", name, tname, err)
+		}
+		srv.Templates[tname] = t
 		log.Printf("Template configured for %s\n", tname)
 	}
 	return nil

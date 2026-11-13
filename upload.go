@@ -9,7 +9,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/rveen/ogdl"
+	"github.com/rveen/ogdl/v2"
 )
 
 const (
@@ -22,7 +22,7 @@ func CreateUploadDir() {
 	os.MkdirAll(tmpDir, 0o755)
 }
 
-func fileUpload(r *http.Request, user string) (*ogdl.Graph, error) {
+func fileUpload(r *http.Request, user string) (*ogdl.Node, error) {
 
 	// Handle file uploads. We call ParseMultipartForm here so that r.Form[] is
 	// initialized. If it isn't a multipart this gives an error.

@@ -4,10 +4,10 @@ package gosqlctx
 
 import (
 	"github.com/rveen/golib/gosql"
-	"github.com/rveen/gserver/v2/context/ctxreg"
-	"github.com/rveen/ogdl"
+	"github.com/rveen/gserver/v3/context/ctxreg"
+	"github.com/rveen/ogdl/v2"
 )
 
 func init() {
-	ctxreg.Register("sql", func(*ogdl.Graph) any { return &gosql.Db{} })
+	ctxreg.Register("sql", func(*ogdl.Node) any { return &gosql.Db{} })
 }

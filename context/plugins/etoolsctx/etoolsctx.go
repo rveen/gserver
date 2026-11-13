@@ -4,10 +4,10 @@ package etoolsctx
 
 import (
 	"github.com/rveen/electronics/etools"
-	"github.com/rveen/gserver/v2/context/ctxreg"
-	"github.com/rveen/ogdl"
+	"github.com/rveen/gserver/v3/context/ctxreg"
+	"github.com/rveen/ogdl/v2"
 )
 
 func init() {
-	ctxreg.Register("etools", func(*ogdl.Graph) any { return &etools.Etools{} })
+	ctxreg.Register("etools", func(*ogdl.Node) any { return &etools.Etools{} })
 }

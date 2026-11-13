@@ -14,9 +14,9 @@ import (
 	"testing/fstest"
 	"time"
 
-	"github.com/rveen/gserver/v2/context/ctxreg"
-	"github.com/rveen/gserver/v2/session"
-	"github.com/rveen/ogdl"
+	"github.com/rveen/gserver/v3/context/ctxreg"
+	"github.com/rveen/gserver/v3/session"
+	"github.com/rveen/ogdl/v2"
 )
 
 const (
@@ -78,8 +78,8 @@ func standardSite() map[string]string {
 
 func init() {
 	// A plugin built from the server config.
-	ctxreg.Register("testplug", func(cfg *ogdl.Graph) any {
-		return cfg.Get("plug.name").String()
+	ctxreg.Register("testplug", func(cfg *ogdl.Node) any {
+		return cfg.Lookup("plug.name").String()
 	})
 }
 
@@ -262,9 +262,9 @@ func (net0) addr() (string, error) {
 func TestDocFilter(t *testing.T) {
 	srv := &Server{DocFilter: func(html, user string) string { return "[" + user + "]" + html }}
 	b := srv.builtins()
-	docv := b["DOCV"].(func(*ogdl.Graph, string) []byte)
-	links := b["DocLinksV"].(func(*ogdl.Graph, string, string) []byte)
-	part := b["docPartV"].(func(*ogdl.Graph, string, string) []byte)
+	docv := b["DOCV"].(func(*ogdl.Node, string) []byte)
+	links := b["DocLinksV"].(func(*ogdl.Node, string, string) []byte)
+	part := b["docPartV"].(func(*ogdl.Node, string, string) []byte)
 
 	ana := ogdl.FromString("user ana")
 	for name, out := range map[string][]byte{

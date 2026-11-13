@@ -12,15 +12,15 @@ import (
 
 	"github.com/chmike/securecookie"
 	"github.com/rveen/golib/fn"
-	"github.com/rveen/gserver/v2/session"
-	"github.com/rveen/ogdl"
+	"github.com/rveen/gserver/v3/session"
+	"github.com/rveen/ogdl/v2"
 )
 
 type Request struct {
 	HttpRequest *http.Request
 	User        string
-	Context     *ogdl.Graph
-	Params      *ogdl.Graph
+	Context     *ogdl.Node
+	Params      *ogdl.Node
 	Path        string
 	File        *fn.FNode
 	Mime        string
@@ -42,7 +42,7 @@ func ConvertRequest(r *http.Request, w http.ResponseWriter, host bool, srv *Serv
 		// Could not create a new session
 		return nil
 	}
-	rq.User = rq.Context.Get("user").String()
+	rq.User = rq.Context.Lookup("user").String()
 	rq.Session = s
 
 	// Add host name in case of multihost
@@ -62,7 +62,7 @@ func ConvertRequest(r *http.Request, w http.ResponseWriter, host bool, srv *Serv
 	return rq
 }
 
-func getSession(r *http.Request, w http.ResponseWriter, host bool, srv *Server) (*ogdl.Graph, *session.Session) {
+func getSession(r *http.Request, w http.ResponseWriter, host bool, srv *Server) (*ogdl.Node, *session.Session) {
 
 	// May be nil, and that is the normal case: anonymous requests get no stored
 	// session. One is created lazily below, only once an authenticated user is
@@ -72,7 +72,7 @@ func getSession(r *http.Request, w http.ResponseWriter, host bool, srv *Server) 
 	// Build a per-request overlay: local nodes (user, userACL, R.*) shadow the
 	// shared read-only server context without copying it.
 	srv.ContextMu.RLock()
-	var parent *ogdl.Graph
+	var parent *ogdl.Node
 	if !host {
 		parent = srv.Context
 	} else {
@@ -172,7 +172,7 @@ func getSession(r *http.Request, w http.ResponseWriter, host bool, srv *Server) 
 	// Add GET, POST, PUT parameters into context
 	for k, vv := range r.Form {
 
-		var n *ogdl.Graph
+		var n *ogdl.Node
 
 		for _, v := range vv {
 
@@ -183,14 +183,14 @@ func getSession(r *http.Request, w http.ResponseWriter, host bool, srv *Server) 
 				g := ogdl.FromString(v)
 				if n == nil {
 					data.Set(k, g)
-					n = data.Get(k)
+					n = data.Lookup(k)
 				} else {
 					n.Add(g)
 				}
 			} else {
 				if n == nil {
 					data.Set(k, v)
-					n = data.Get(k)
+					n = data.Lookup(k)
 				} else {
 					n.Add(v)
 				}
@@ -324,22 +324,24 @@ func (r *Request) Process(srv *Server) error {
 				}
 				return fmt.Errorf("no template configured for type %q", tp)
 			}
-			r.File.Content = tpl.Process(r.Context)
+			r.File.Content = process(tpl, r.Context, tp)
 			r.Mime = "text/html"
 
 		default: // 'file'. Check if it is a template
 			if hasTplExtension(r.File.Path) {
-				// tpl := ogdl.NewTemplate(string(r.File.Content))
-				tpl := ogdl.NewTemplateFromBytes(r.File.Content)
+				tpl, err := ogdl.ParseTemplate(string(r.File.Content))
+				if err != nil {
+					return fmt.Errorf("template %s: %w", r.File.Path, err)
+				}
 
 				r.Context.Set("mime", "")
-				r.File.Content = tpl.Process(r.Context)
+				r.File.Content = process(tpl, r.Context, r.File.Path)
 
 				// Allow templates to return arbitrary mime types
-				mime := r.Context.Get("mime").String()
+				mime := r.Context.Lookup("mime").String()
 				if mime != "" {
 					r.Mime = mime
-					r.File.Content = r.Context.Get("content").Bytes()
+					r.File.Content = r.Context.Lookup("content").Bytes()
 				}
 			}
 		}
@@ -350,7 +352,7 @@ func (r *Request) Process(srv *Server) error {
 			if tpl == nil {
 				return fmt.Errorf("no template named %q", t)
 			}
-			r.File.Content = tpl.Process(r.Context)
+			r.File.Content = process(tpl, r.Context, t)
 			r.Mime = "text/html"
 		}
 	}
@@ -379,7 +381,7 @@ func dirListing(r *Request) []byte {
 
 	var b strings.Builder
 
-	base := r.Context.Get("R.url").String()
+	base := r.Context.Lookup("R.url").String()
 	if base == "" {
 		base = "/"
 	}
@@ -402,7 +404,7 @@ func dirListing(r *Request) []byte {
 				continue
 			}
 
-			isDir := e.Get("type").String() == "dir"
+			isDir := e.Lookup("type").String() == "dir"
 
 			link := name
 			label := name
@@ -413,7 +415,7 @@ func dirListing(r *Request) []byte {
 
 			size := ""
 			if !isDir {
-				size = strconv.FormatInt(e.Get("size").Int64(0), 10)
+				size = strconv.FormatInt(e.Lookup("size").Int64(0), 10)
 			}
 
 			b.WriteString("<tr><td><a href=\"" + html.EscapeString(link) + "\">" +
@@ -518,4 +520,15 @@ func safeRedirect(p string) string {
 		return p
 	}
 	return "/"
+}
+
+// process renders a template. v1 rendered every template to the end and
+// never reported anything; v2 stops at the first failed expression or call.
+// The error is logged and what was rendered up to it is served.
+func process(t *ogdl.Template, ctx *ogdl.Node, name string) []byte {
+	s, err := t.Process(ctx)
+	if err != nil {
+		log.Printf("template %s: %v", name, err)
+	}
+	return []byte(s)
 }

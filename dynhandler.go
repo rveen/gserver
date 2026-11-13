@@ -10,8 +10,8 @@ import (
 
 	"github.com/rveen/golib/fn"
 	"github.com/rveen/golib/fn/httphook"
-	"github.com/rveen/gserver/v2/session"
-	"github.com/rveen/ogdl"
+	"github.com/rveen/gserver/v3/session"
+	"github.com/rveen/ogdl/v2"
 )
 
 // DynamicHandler serves dynamic content from srv.Root, enforcing path-level
@@ -165,7 +165,7 @@ func redirectToDirectory(w http.ResponseWriter, rh *http.Request, r *Request, sr
 	return true
 }
 
-func checkPath(path string, cfg *ogdl.Graph) bool {
+func checkPath(path string, cfg *ogdl.Node) bool {
 
 	if cfg == nil {
 		return true

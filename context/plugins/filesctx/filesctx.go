@@ -4,10 +4,10 @@ package filesctx
 
 import (
 	"github.com/rveen/golib/files"
-	"github.com/rveen/gserver/v2/context/ctxreg"
-	"github.com/rveen/ogdl"
+	"github.com/rveen/gserver/v3/context/ctxreg"
+	"github.com/rveen/ogdl/v2"
 )
 
 func init() {
-	ctxreg.Register("files", func(*ogdl.Graph) any { return &files.Files{} })
+	ctxreg.Register("files", func(*ogdl.Node) any { return &files.Files{} })
 }

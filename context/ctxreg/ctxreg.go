@@ -11,11 +11,11 @@
 // integration can be built from its own section of it. It may be nil.
 package ctxreg
 
-import "github.com/rveen/ogdl"
+import "github.com/rveen/ogdl/v2"
 
 // Factory produces the value installed in the template context under the
 // name it was registered with. cfg is the server configuration, possibly nil.
-type Factory func(cfg *ogdl.Graph) any
+type Factory func(cfg *ogdl.Node) any
 
 // providers maps a context name (the key used in templates) to its factory.
 var providers = map[string]Factory{}

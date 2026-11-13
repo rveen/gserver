@@ -9,7 +9,7 @@ import (
 	uu "net/url"
 
 	auth "github.com/abbot/go-http-auth"
-	"github.com/rveen/gserver/v2/session"
+	"github.com/rveen/gserver/v3/session"
 )
 
 // LoginAdapter handles "Login" and "Logout"

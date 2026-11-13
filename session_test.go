@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/rveen/golib/fn"
-	"github.com/rveen/gserver/v2/session"
-	"github.com/rveen/ogdl"
+	"github.com/rveen/gserver/v3/session"
+	"github.com/rveen/ogdl/v2"
 )
 
 // testServer builds the minimum Server needed by getSession(): a context to
@@ -86,7 +86,7 @@ func TestDefaultUserCreatesNoSession(t *testing.T) {
 	w := httptest.NewRecorder()
 	ctx, sess := getSession(httptest.NewRequest("GET", "/", nil), w, false, srv)
 
-	if got := ctx.Get("user").String(); got != "guest" {
+	if got := ctx.Lookup("user").String(); got != "guest" {
 		t.Errorf("user = %q, want %q", got, "guest")
 	}
 	if sess != nil || session.Len() != 0 {
@@ -122,7 +122,7 @@ func TestAuthenticatedRequestCreatesSession(t *testing.T) {
 	if n := session.Len(); n != 1 {
 		t.Errorf("session.Len() = %d, want 1", n)
 	}
-	if got := ctx.Get("user").String(); got != "alice" {
+	if got := ctx.Lookup("user").String(); got != "alice" {
 		t.Errorf("user = %q, want %q", got, "alice")
 	}
 	if !hasCookie(w, "sessid") {
@@ -145,10 +145,10 @@ func TestInjectedUserCreatesSession(t *testing.T) {
 	if sess == nil {
 		t.Fatal("injected identity got no session")
 	}
-	if got := ctx.Get("user").String(); got != "bob" {
+	if got := ctx.Lookup("user").String(); got != "bob" {
 		t.Errorf("user = %q, want %q", got, "bob")
 	}
-	if got := ctx.Get("userACL").String(); got != "rw" {
+	if got := ctx.Lookup("userACL").String(); got != "rw" {
 		t.Errorf("userACL = %q, want %q", got, "rw")
 	}
 	if got, _ := sess.Attr("userACL").(string); got != "rw" {
@@ -165,7 +165,7 @@ func TestUnknownHostReturnsNilContext(t *testing.T) {
 	defer session.Close()
 
 	srv := testServer()
-	srv.HostContexts = map[string]*ogdl.Graph{"known.example": ogdl.New(nil)}
+	srv.HostContexts = map[string]*ogdl.Node{"known.example": ogdl.New(nil)}
 
 	r := httptest.NewRequest("GET", "/", nil)
 	r.Host = "unknown.example"
