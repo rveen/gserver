@@ -6,6 +6,34 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [3.0.0] - 2026-11-13
+
+**The module path is now `github.com/rveen/gserver/v3`, on ogdl v2**
+(`github.com/rveen/ogdl/v2` v2.2.0). Imports change from `.../gserver/v2/...`
+to `.../gserver/v3/...`. Sites need no change: templates and config files
+written for v1 behave as before.
+
+### Changed
+
+- The API's ogdl types are v2's: `*ogdl.Graph` becomes `*ogdl.Node` in
+  `Server.Config`, `Server.Context`, `Server.HostContexts`, `NewWithConfig`,
+  `Request.Context`, `Request.Params`, `ctxreg.Factory` and `SessionContext`.
+- `Server.Templates` holds `*ogdl.Template` (was `*ogdl.Graph`).
+- Templates (pages, config, `templates.ogdl`, the `template()` built-in) are
+  parsed with ogdl's `ParseTemplateV1`, so they render as with ogdl v1: a
+  failed expression renders nothing and the page goes on. The errors are now
+  logged.
+- Config and context files are read with `ogdl.ParseV1` (v1 text: `a b c` is
+  a chain).
+
+### Fixed
+
+- A template that doesn't parse fails at load (config, `templates.ogdl`) or
+  answers an error (file templates), instead of rendering silently wrong.
+- A malformed `.conf` file, or a host context that doesn't parse, is reported
+  instead of ignored.
+- webapp: a stray `$end` in the navbar template cut off `</div></nav>`.
+
 ## [2.0.0] - 2026-11-12
 
 **The module path is now `github.com/rveen/gserver/v2`**: imports change from

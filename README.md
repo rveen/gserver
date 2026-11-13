@@ -21,8 +21,8 @@ MIT (see LICENSE).
 
 ## As a library
 
-The module path is `github.com/rveen/gserver/v2` (v2 changed the API; v1.0.0
-remains for existing users). A program serving a site is a few lines:
+The module path is `github.com/rveen/gserver/v3` (v3 moved to ogdl v2;
+v2.0.0 and v1.0.0 remain for existing users). A program serving a site is a few lines:
 
 ```go
 import (
@@ -30,8 +30,8 @@ import (
 	"log"
 	"path/filepath"
 
-	"github.com/rveen/gserver/v2"
-	_ "github.com/rveen/gserver/v2/context/plugins/htmlctx" // template objects
+	"github.com/rveen/gserver/v3"
+	_ "github.com/rveen/gserver/v3/context/plugins/htmlctx" // template objects
 )
 
 func main() {
