@@ -8,6 +8,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Remote functions of the `ogdlrf` section are callable again from templates
+  as `$name.f(args)` (e.g. `$bleve.search(R.q)`). Since the move to ogdl v2
+  such a call evaluated to nothing and no request was sent; the context now
+  holds the `ogdlrf.Client` itself, reached through `Client.Member` (ogdl
+  v2.3.0, now required).
+
 - A request path that is not clean (`//`, `/./`, `/../`) is served as its
   cleaned form by `Serve` and `Run`, as in v1, instead of answered by
   ServeMux with a 301. Behind a proxy that adds a slash, such as Apache's

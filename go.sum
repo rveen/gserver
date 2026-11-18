@@ -35,8 +35,8 @@ github.com/rveen/golib v0.0.0-20261113162322-56fc9475210b h1:QNfuxVy5ZDYaPjIQRhx
 github.com/rveen/golib v0.0.0-20261113162322-56fc9475210b/go.mod h1:C6yvVEiKN6QPP7Jhw/6vjE7EjWyA2vy/OsCzLeBoCKM=
 github.com/rveen/margaid v0.0.0-20260526073250-2471c92c43ba h1:sREJeU9WZxNg45DtCym6EyHpwhwLd5WoR/2CpGtmceg=
 github.com/rveen/margaid v0.0.0-20260526073250-2471c92c43ba/go.mod h1:Y253vQ9CxwJtA92o/LG/G0RuCoPjYnaGth/zlQ4rcfU=
-github.com/rveen/ogdl/v2 v2.2.0 h1:QZ18E0lipvXrNgQUCCosKV5CLQninau3m5jnJghKMJw=
-github.com/rveen/ogdl/v2 v2.2.0/go.mod h1:RI+l3mAYsKm5dUZ9teQDbEOJDfG5YwInNSFWrqaKp4A=
+github.com/rveen/ogdl/v2 v2.3.0 h1:75e+bveNS+d/HfcVwCAVfoxC9a3tVa7c5r51yFq/lNI=
+github.com/rveen/ogdl/v2 v2.3.0/go.mod h1:RI+l3mAYsKm5dUZ9teQDbEOJDfG5YwInNSFWrqaKp4A=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/testify v1.7.0/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
 github.com/tetratelabs/wazero v1.12.0 h1:DuWcpNu/FzgEXgGBDp8J1Spc+CWOvvtvVyjKlaZopYU=

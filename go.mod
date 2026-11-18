@@ -8,7 +8,7 @@ require (
 	github.com/fsnotify/fsnotify v1.10.1
 	github.com/rveen/electronics v0.0.0-20261105101525-c8252714aee9
 	github.com/rveen/golib v0.0.0-20261113162322-56fc9475210b
-	github.com/rveen/ogdl/v2 v2.2.0
+	github.com/rveen/ogdl/v2 v2.3.0
 )
 
 require (

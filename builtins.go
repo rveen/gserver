@@ -58,6 +58,10 @@ func (srv *Server) registerRemoteFunctions() {
 //	  name
 //	    host localhost:1135
 //	    protocol 2
+//
+// A template calls the remote function f of the entry name as
+// $name.f(args), which sends the request `f` with the arguments as its
+// children (ogdlrf.Client.Member).
 func (srv *Server) setRemoteFunctions(g *ogdl.Node) {
 	if g == nil || srv.Config == nil {
 		return
@@ -71,8 +75,10 @@ func (srv *Server) setRemoteFunctions(g *ogdl.Node) {
 		host := rf.Lookup("host").String()
 		proto := rf.Lookup("protocol").Int64(2)
 		log.Println("remote function registered:", name, host, proto)
-		f := rpc.Client{Host: host, Timeout: time.Second, Protocol: int(proto)}
-		g.Set(name, f.Call)
+		// The client itself, not its Call method: $name.f(args) reaches the
+		// remote function f through Client.Member. A bare func has no members,
+		// so with Call installed every such call evaluated to nothing.
+		g.Set(name, &rpc.Client{Host: host, Timeout: time.Second, Protocol: int(proto)})
 	}
 }
 
