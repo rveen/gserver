@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- A request path that is not clean (`//`, `/./`, `/../`) is served as its
+  cleaned form by `Serve` and `Run`, as in v1, instead of answered by
+  ServeMux with a 301. Behind a proxy that adds a slash, such as Apache's
+  `ProxyPass "/projects" "http://localhost:82/projects/"` (which forwards
+  `/projects/rolf` as `/projects//rolf`), the 301 redirected the browser to
+  the same URL forever ("redirected you too many times").
+
 ## [3.0.0] - 2026-11-13
 
 **The module path is now `github.com/rveen/gserver/v3`, on ogdl v2**

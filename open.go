@@ -199,8 +199,9 @@ func (srv *Server) Handlers() Handlers {
 //	/files/                 Files
 //	/                       Login(Dynamic)
 //
-// ServeMux answers a path that is not clean (//, /./, /../) with a 301 to its
-// cleaned form.
+// On its own, ServeMux answers a path that is not clean (//, /./, /../) with a
+// 301 to its cleaned form; Serve and Run clean the path first, so through them
+// such a request is served directly (see cleanPath).
 func (srv *Server) Mux() *http.ServeMux {
 	h := srv.Handlers()
 	mux := http.NewServeMux()
@@ -216,6 +217,9 @@ func (srv *Server) Mux() *http.ServeMux {
 // Serve serves plain HTTP on srv.Host until the listener fails or Shutdown is
 // called, after which it returns nil. gserver does not do TLS: put it behind a
 // proxy (Caddy, Apache httpd, nginx) that terminates HTTPS.
+//
+// A request path that is not clean (//, /./, /../) reaches h already cleaned,
+// as gserver v1 served it, rather than redirected (see cleanPath).
 func (srv *Server) Serve(h http.Handler) error {
 
 	timeout := srv.Timeout
@@ -228,7 +232,7 @@ func (srv *Server) Serve(h http.Handler) error {
 
 	server := &http.Server{
 		Addr:              srv.Host,
-		Handler:           h,
+		Handler:           cleanPath(h),
 		ReadTimeout:       timeout,
 		WriteTimeout:      timeout,
 		IdleTimeout:       30 * time.Second,
