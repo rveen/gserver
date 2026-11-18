@@ -10,8 +10,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 **The module path is now `github.com/rveen/gserver/v3`, on ogdl v2**
 (`github.com/rveen/ogdl/v2` v2.2.0). Imports change from `.../gserver/v2/...`
-to `.../gserver/v3/...`. Sites need no change: templates and config files
-written for v1 behave as before.
+to `.../gserver/v3/...`. Config files written for v1 read as before, but
+**templates that index a loop variable or an assigned node with `[0]` must be
+updated** (see the template entry under *Changed*).
 
 ### Changed
 
@@ -20,9 +21,20 @@ written for v1 behave as before.
   `Request.Context`, `Request.Params`, `ctxreg.Factory` and `SessionContext`.
 - `Server.Templates` holds `*ogdl.Template` (was `*ogdl.Graph`).
 - Templates (pages, config, `templates.ogdl`, the `template()` built-in) are
-  parsed with ogdl's `ParseTemplateV1`, so they render as with ogdl v1: a
-  failed expression renders nothing and the page goes on. The errors are now
-  logged.
+  parsed with ogdl's `ParseTemplateV1`, so they mostly render as with ogdl
+  v1: a failed expression renders nothing and the page goes on. The errors
+  are now logged.
+- **Breaking for templates:** a loop variable is now the element itself, not
+  v1's wrapper node, so the `[0]` that v1 needed after it must go. Only a bare
+  `$x` still prints as before; a longer path through `[0]` now selects the
+  element's first child and renders empty (or, before a further index, the
+  first character of a value). The same applies to a node assigned from a
+  path, as in `$(item=q.rows[0])`. Update templates like this:
+  - `$f[0].name`, `$if(f[0].type=="dir")` → `$f.name`, `$if(f.type=="dir")`
+  - `$(item=q.rows[0])` … `$item[0].Code` → `$item.Code`
+  - rows of `sql.Query` (values without column names): `$c[0][0]`,
+    `$c[0][1]` → `$c[0]._name`, `$c[1]._name`, because a value with nothing
+    below it, reached by a path, renders empty in v1 mode.
 - Config and context files are read with `ogdl.ParseV1` (v1 text: `a b c` is
   a chain).
 
